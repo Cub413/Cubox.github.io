@@ -1,195 +1,1277 @@
 <!DOCTYPE html>
-<html lang="es">
+<html>
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="utf-8">
 <title>CUBOX</title>
 <style>
-    html, body { margin: 0; padding: 0; overflow: hidden; width: 100%; height: 100%; background: #87ceeb; }
-    canvas { display: block; width: 100%; height: 100%; filter: blur(2px); }
+html, body { margin:0; padding:0; overflow:hidden; }
+canvas { display:block; background:#87CEEB; }
 
-    button {
-        position: fixed;
-        left: 50%;
-        transform: translateX(-50%);
-        width: 100px;
-        height: 40px;
-        background-color: rgba(100,100,100,0.6);
-        color: white;
-        border: 2px solid white;
-        border-radius: 6px;
-        font-weight: bold;
-        font-size: 14px;
-        cursor: pointer;
-        z-index: 1000;
-        touch-action: manipulation;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        box-sizing: border-box;
-    }
-
-    #start-btn { top: 50%; transform: translate(-50%, -50%); }
-    #play-btn { top: 50%; transform: translate(-50%, -50%); display: none; margin-bottom: 50px;}
-    #settings-btn { top: 50%; transform: translate(-50%, -50%); display: none; margin-top: 60px; }
-
-  #orientation-img {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    object-fit: contain;  /* mantiene proporción y se adapta */
-    display: none;
-    z-index: 1000;
+/* Contenedor de controles */
+/* Contenedor normal de controles */
+#controls {
+  position: fixed;
+  bottom: 10px;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: space-between;
+  padding: 0 20px;
+  pointer-events: none; /* ← importante, evita que tape clicks */
 }
 
-    #title {
-        position: fixed;
-        font-family: 'Press Start 2P', monospace;
-        font-size: 40px;
-        color: yellow;
-        text-shadow: 2px 2px 0 red, -2px -2px 0 blue;
-        top: 20px;
-        left: 50%;
-        transform: translateX(-50%);
-        display: none;
-        z-index: 1000;
-        pointer-events: none;
-        text-align: center;
-    }
+.left-controls,
+.right-controls {
+  display: flex;
+  gap: 10px;
+  pointer-events: auto; /* ← los hijos sí reciben toques */
+}
+
+/* Fondo borroso */
+#blur-bg {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  backdrop-filter: blur(5px);
+  background: rgba(0,0,0,0.2);
+  display: none;
+  z-index: 900;
+}
+
+/* Botón de pausa pequeño */
+#pause-btn {
+  position: fixed;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 40px;
+  height: 30px;
+  background-color: rgba(100,100,100,0.6);
+  color: white;
+  border: 2px solid white;
+  border-radius: 6px;
+  font-weight: bold;
+  cursor: pointer;
+  z-index: 1000;
+  touch-action: manipulation;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-around; /* distribuye las barras */
+  align-items: center;
+  box-sizing: border-box;
+}
+
+
+
+/* Menú de pausa */
+#pause-menu {
+  position: fixed;
+  top: 100px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 200px;
+  background: #555;
+  border: 2px solid #000;
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  font-family: 'Press Start 2P', monospace;
+  z-index: 1001;
+}
+
+.menu-btn {
+  background: #888;
+  color: #000;
+  border: 2px solid #000;
+  padding: 6px;
+  margin: 4px 0;
+  width: 100%;
+  text-align: center;
+  cursor: pointer;
+  user-select: none;
+}
+
+/* Panel de ajustes deslizable desde la derecha */
+#settings-panel {
+  position: fixed;
+  top: 50px;
+  right: -240px; /* fuera de la pantalla al inicio */
+  width: 220px;
+  height: 250px;
+  background: #555;
+  border: 2px solid #000;
+  display: flex;
+  flex-direction: column;
+  z-index: 1002;
+  transition: right 0.3s ease;
+}
+
+#settings-panel.active {
+  right: 10px; /* cuando está abierto */
+}
+
+#settings-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #777;
+  border-bottom: 2px solid #000;
+  padding: 4px 8px;
+  font-family: 'Press Start 2P', monospace;
+}
+
+#close-settings {
+  cursor: pointer;
+}
+
+#settings-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 6px;
+}
+
+.setting-btn {
+  background: #888;
+  color: #000;
+  border: 2px solid #000;
+  padding: 6px;
+  margin: 4px 0;
+  width: 100%;
+  text-align: center;
+  cursor: pointer;
+  user-select: none;
+}
+
+/* Botón PRI separado y más arriba */
+#pri-container {
+  position: fixed;
+  right: 10px;
+  bottom: 100px; /* más arriba que los otros botones */
+  z-index: 10;
+}
+
+/* Estilo común para todos los botones */
+.control-btn {
+  width: 64px;
+  height: 40px;
+  background-color: rgba(100, 100, 100, 0.5);
+  border: 2px solid white;
+  color: white;
+  text-align: center;
+  line-height: 40px;
+  font-weight: bold;
+  border-radius: 8px;
+  user-select: none;
+  touch-action: none;
+}
+
+/* PRI activo */
+#pri-btn.active {
+  background-color: rgba(200, 50, 50, 0.7);
+}
+
+#hotbar-fixed {
+  position: fixed;
+  bottom: 15px;           /* posición un poco más arriba */
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 5px;               /* espacio moderado entre slots */
+  background: rgba(0,0,0,0.6);
+  padding: 5px;           /* padding moderado */
+  border-radius: 6px;     /* bordes redondeados moderados */
+  z-index: 20;
+}
+
+#hotbar-fixed .slot {
+  width: 30px;            /* tamaño de slots más cómodo */
+  height: 30px;
+}
+.control-btn.active {
+  outline: 3px solid yellow; /* borde sin afectar tamaño */
+  border: 2px solid white;   /* borde original se mantiene */
+  box-shadow: none;
+  transform: none;
+}
+
+
+
+#inventory-panel {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(30,30,30,0.9);
+  padding: 15px;
+  border-radius: 10px;
+  display: none; /* lo puedes mostrar/ocultar con JS */
+  z-index: 30;
+}
+
+#inventory-grid {
+  display: grid;
+  grid-template-columns: repeat(9, 1fr);
+  gap: 5px;
+  margin-bottom: 10px;
+}
+
+#hotbar {
+  display: flex;
+  gap: 2px;
+  justify-content: center;
+}
+
+.slot {
+  width: 45px;
+  height: 45px;
+  background: #ccc;
+  border: 2px solid #555;
+  border-radius: 4px;
+  cursor: pointer;
+  outline: none;
+  -webkit-tap-highlight-color: transparent;
+  position: relative; /* ← importante para el contador */
+  overflow: hidden;
+}
+
+.slot div.count {
+  position: absolute;
+  bottom: 2px;
+  right: 2px;
+  color: white;
+  font-size: 12px;
+  font-weight: bold;
+  pointer-events: none;
+}
+
+.slot.selected {
+  border: 2px solid yellow;
+  box-shadow: none; /* quitamos el efecto interno */
+}
+.slot img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain; /* mantiene proporción sin deformar */
+  pointer-events: none; /* para que el click vaya al slot */
+}
+
+#inventory-btn {
+  position: fixed;
+  left: 10px;
+  bottom: 100px;
+  width: 60px;
+  height: 40px;
+  background-color: rgba(100,100,100,0.6);
+  color: white;
+  border: 2px solid white;
+  border-radius: 6px;
+  font-weight: bold;
+  cursor: pointer;
+  z-index: 40;
+  touch-action: manipulation;
+}
+
+
+
+#fps-counter {
+  position: fixed;
+  top: 5px;
+  left: 5px;
+  color: white;
+  background: rgba(0,0,0,0.5);
+  padding: 4px;
+  border-radius: 4px;
+  font-family: monospace;
+  display: none;
+}
+
+#object-controls {
+  position: fixed;
+  bottom: 10px;
+  left: 300px;
+  width: 220px;
+  background: #111;
+  border: 2px solid #0f0;
+  color: #0f0;
+  font-family: monospace;
+  padding: 10px;
+  z-index: 100;
+  user-select: none;
+  box-shadow: 4px 4px 0 #000;
+  cursor: grab;
+}
+
+#object-controls.dragging {
+  cursor: grabbing;
+}
+
+#settings-header {
+  font-weight: bold;
+  text-align: center;
+  margin-bottom: 5px;
+}
+
+#panel-msg {
+  text-align: center;
+  font-size: 12px;
+  color: #ff0;
+  opacity: 0;
+  transition: opacity 0.3s;
+  margin-bottom: 5px;
+}
+
+.control-row {
+  display: flex;
+  justify-content: space-between;
+  margin: 3px 0;
+}
+
+button {
+  background: #222;
+  color: #0f0;
+  border: 2px solid #0f0;
+  font-family: monospace;
+  cursor: pointer;
+  padding: 2px 5px;
+  user-select: none;
+}
+
+button:active {
+  background: #0f0;
+  color: #222;
+}
+
 </style>
-<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
 </head>
 <body>
-<canvas id="game"></canvas>
+  
+  <!-- Panel inicial -->
+<div id="init-panel" style="
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background: rgba(0,0,0,0.8);
+  color: white;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  z-index: 100;
+  font-family: sans-serif;
+">
+  
+  <p style="font-size: 18px; margin-bottom: 20px;">¿Quieres borrar el localStorage de los controles?</p>
+  <div>
+    <button id="init-yes" style="margin-right: 10px; padding: 10px 20px;">Sí</button>
+    <button id="init-no" style="padding: 10px 20px;">No</button>
+  </div>
+</div>
+<div id="pause-btn">▐▐</div>
+<div id="blur-bg"></div>
 
-<button id="start-btn">COMENZAR</button>
-<button id="play-btn">JUGAR</button>
-<button id="settings-btn">AJUSTES</button>
-<img id="orientation-img" src="Texturas/horizontal.png">
-<div id="title">CUBOX</div>
+
+
+<div id="pause-menu">
+  <div class="menu-btn" id="resume-btn">Reanudar</div>
+  <div class="menu-btn" id="exit-btn">Salir</div>
+  <div class="menu-btn" id="settings-btn">Ajustes</div>
+</div>
+
+<div id="settings-panel">
+    <div id="settings-header">
+      Ajustes
+      <div id="close-settings">×</div>
+    </div>
+    <div id="settings-content">
+    
+<div id="controls-btn" class="setting-btn">CONTROLS</div>
+
+
+      <!-- Nuevo botón de FPS -->
+      <div id="fps-toggle" class="setting-btn">mostrar fps: no</div>
+    </div>
+  </div>
+
+  <div id="fps-counter"></div>
+<div id="object-controls" style="display:none;">
+  <div id="settings-header">Ajustes de objeto</div>
+  <div id="panel-msg"></div>
+  <div>Objeto seleccionado: <span id="selected-name">Ninguno</span></div>
+
+  <div class="control-row">
+    <label>Pos X:</label>
+    <button id="posx-minus">-</button>
+    <button id="posx-plus">+</button>
+  </div>
+  <div class="control-row">
+    <label>Pos Y:</label>
+    <button id="posy-minus">-</button>
+    <button id="posy-plus">+</button>
+  </div>
+  <div class="control-row">
+    <label>Escala X:</label>
+    <button id="scalex-minus">-</button>
+    <button id="scalex-plus">+</button>
+  </div>
+  <div class="control-row">
+    <label>Escala Y:</label>
+    <button id="scaley-minus">-</button>
+    <button id="scaley-plus">+</button>
+  </div>
+
+  <div class="control-row">
+    <button id="save-btn">Guardar</button>
+    <button id="reset-btn">Restablecer</button>
+    <button id="confirm-btn">Cerrar</button>
+  </div>
+</div>
+
+<canvas id="gameCanvas"></canvas>
+<!-- Hotbar fija en pantalla -->
+<!-- Botón para abrir inventario -->
+<button id="inventory-btn">INV</button>
+
+<div id="hotbar-fixed">
+  <button class="slot"></button><button class="slot"></button><button class="slot"></button>
+  <button class="slot"></button><button class="slot"></button><button class="slot"></button>
+  <button class="slot"></button><button class="slot"></button><button class="slot"></button>
+</div>
+
+<!-- Inventario completo -->
+<div id="inventory-panel">
+  <div id="inventory-grid">
+    <!-- 27 slots (9x3) -->
+    <button class="slot"></button><button class="slot"></button><button class="slot"></button>
+    <button class="slot"></button><button class="slot"></button><button class="slot"></button>
+    <button class="slot"></button><button class="slot"></button><button class="slot"></button>
+
+    <button class="slot"></button><button class="slot"></button><button class="slot"></button>
+    <button class="slot"></button><button class="slot"></button><button class="slot"></button>
+    <button class="slot"></button><button class="slot"></button><button class="slot"></button>
+
+    <button class="slot"></button><button class="slot"></button><button class="slot"></button>
+    <button class="slot"></button><button class="slot"></button><button class="slot"></button>
+    <button class="slot"></button><button class="slot"></button><button class="slot"></button>
+  </div>
+
+  <!-- Hotbar dentro del inventario -->
+  <div id="hotbar">
+    <button class="slot"></button><button class="slot"></button><button class="slot"></button>
+    <button class="slot"></button><button class="slot"></button><button class="slot"></button>
+    <button class="slot"></button><button class="slot"></button><button class="slot"></button>
+  </div>
+</div>
+
+
+<div id="controls">
+  <div class="left-controls">
+    <div class="control-btn" id="left">◀</div>
+    <div class="control-btn" id="right">▶</div>
+  </div>
+  <div class="right-controls">
+    <div class="control-btn" id="down">▼</div>
+    <div class="control-btn" id="jump">▲</div>
+  </div>
+</div>
+
+<div id="pri-container">
+  <div class="control-btn" id="pri-btn">PRI</div>
+</div>
+</div>
 
 <script>
-// ===== Mundo 2D de fondo =====
-const canvas = document.getElementById('game');
+const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
-canvas.width = window.innerWidth;
-canvas.height = window.innerHeight;
+let width = window.innerWidth;
+let height = window.innerHeight;
 
-const BLOCK_SIZE = 50;
-const CHUNK_WIDTH = 10;
-const grassImg = new Image(); grassImg.src = 'Texturas/cesped_parte_costado.jpg';
-const dirtImg = new Image(); dirtImg.src = 'Texturas/tierra.jpg';
-const stoneImg = new Image(); stoneImg.src = 'Texturas/piedra.jpg';
+const scale = window.devicePixelRatio || 1; // detecta si es 2K, 4K, etc.
+canvas.width = width * scale;
+canvas.height = height * scale;
+canvas.style.width = width + "px";
+canvas.style.height = height + "px";
+ctx.scale(scale, scale);
 
-let chunks = {};
-let cameraX = 0;
-const camSpeed = 2;
 
-function createChunk(chunkX){
-    const column = [];
-    for(let x=0; x<CHUNK_WIDTH; x++){
-        const height = Math.floor(Math.random() * 3) + 3;
-        const blocks = [];
-        for(let y=0; y<height; y++){
-            if(y === height-1) blocks.push('grass');
-            else if(y >= height-3) blocks.push('dirt');
-            else blocks.push('stone');
-        }
-        column.push(blocks);
-    }
-    chunks[chunkX] = column;
+let BLOCK_SIZE = 100; // valor inicial
+
+function setZoom(level) {
+  BLOCK_SIZE = level; // ejemplo: setZoom(80) → más cerca
 }
+let selectedObject = null;
+const factoryStyles = new WeakMap();
 
-for(let i=0;i<5;i++) createChunk(i*CHUNK_WIDTH);
+const panel = document.getElementById("object-controls");
+const msgBox = document.getElementById("panel-msg");
 
-function draw(){
-    ctx.clearRect(0,0,canvas.width,canvas.height);
-    for(const chunkKey in chunks){
-        const chunk = chunks[chunkKey];
-        const chunkX = parseInt(chunkKey);
-        for(let x=0; x<chunk.length; x++){
-            const blocks = chunk[x];
-            for(let y=0; y<blocks.length; y++){
-                let img;
-                if(blocks[y]==='grass') img = grassImg;
-                else if(blocks[y]==='dirt') img = dirtImg;
-                else img = stoneImg;
-                ctx.drawImage(img, (chunkX + x)*BLOCK_SIZE - cameraX, canvas.height - (y+1)*BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE);
-            }
-        }
-    }
-}
-
-function animate(){
-    requestAnimationFrame(animate);
-    cameraX += camSpeed;
-    const lastChunkX = Math.max(...Object.keys(chunks));
-    if(cameraX + canvas.width/ BLOCK_SIZE > lastChunkX){
-        createChunk(lastChunkX + CHUNK_WIDTH);
-    }
-    for(const key in chunks){
-        if((parseInt(key)+CHUNK_WIDTH)*BLOCK_SIZE - cameraX < -CHUNK_WIDTH*BLOCK_SIZE){
-            delete chunks[key];
-        }
-    }
-    draw();
-}
-animate();
-
-// ===== UI y fullscreen =====
-const startBtn = document.getElementById('start-btn');
-const playBtn = document.getElementById('play-btn');
-const settingsBtn = document.getElementById('settings-btn');
-const title = document.getElementById('title');
-const orientationImg = document.getElementById('orientation-img');
-
-function updateUI(){
-    const isFullscreen = !!document.fullscreenElement;
-    const isHorizontal = window.innerWidth > window.innerHeight;
-
-    if(isFullscreen && isHorizontal){
-        startBtn.style.display = 'none';
-        orientationImg.style.display = 'none';
-        playBtn.style.display = 'block';
-        settingsBtn.style.display = 'block';
-        title.style.display = 'block';
-    } else if(isFullscreen && !isHorizontal){
-        startBtn.style.display = 'none';
-        orientationImg.style.display = 'block';
-        playBtn.style.display = 'none';
-        settingsBtn.style.display = 'none';
-        title.style.display = 'none';
-    } else {
-        startBtn.style.display = 'block';
-        title.style.display = 'none';
-        playBtn.style.display = 'none';
-        settingsBtn.style.display = 'none';
-        orientationImg.style.display = 'none';
-    }
-}
-
-startBtn.addEventListener('click', ()=>{
-    if(document.documentElement.requestFullscreen) document.documentElement.requestFullscreen();
-    updateUI();
+document.getElementById("controls-btn").addEventListener("click", () => {
+  panel.style.display = panel.style.display === "none" ? "block" : "none";
 });
 
-playBtn.addEventListener('click', ()=>{
-    // Ir a game.html sin salir del fullscreen
-    fetch('game.html').then(r => r.text()).then(html=>{
-        document.open();
-        document.write(html);
-        document.close();
-        if(document.documentElement.requestFullscreen) document.documentElement.requestFullscreen();
+function showMessage(text, duration = 1500) {
+  if (!msgBox) return;
+  msgBox.textContent = text;
+  msgBox.style.opacity = "1";
+  setTimeout(() => msgBox.style.opacity = "0", duration);
+}
+
+function initSelected(obj) {
+  if (!panel || panel.style.display === "none") return;
+  if (!obj.id) { 
+    showMessage("Objeto necesita ID único");
+    return; 
+  }
+
+  selectedObject = obj;
+  selectedObject.style.position = "absolute"; // fuerza movible
+  document.getElementById("selected-name").textContent = obj.id;
+
+  if (!factoryStyles.has(obj)) {
+    const style = window.getComputedStyle(obj);
+    factoryStyles.set(obj, {
+      left: style.left || obj.offsetLeft + "px",
+      top: style.top || obj.offsetTop + "px",
+      width: style.width || obj.offsetWidth + "px",
+      height: style.height || obj.offsetHeight + "px"
     });
+  }
+
+  const key = "object-" + obj.id;
+  const saved = localStorage.getItem(key);
+  if (saved) {
+    const data = JSON.parse(saved);
+    obj.style.left = data.left;
+    obj.style.top = data.top;
+    obj.style.width = data.width;
+    obj.style.height = data.height;
+  }
+}
+
+document.addEventListener("click", e => {
+  if (!panel || panel.style.display === "none") return;
+  if (e.target.closest("#object-controls") || e.target.closest("#controls-btn")) return;
+  
+  const obj = e.target.closest("[id]");
+  if (!obj) return;
+
+  initSelected(obj);
 });
 
-window.addEventListener('resize', updateUI);
-document.addEventListener('fullscreenchange', updateUI);
+function changeStylePx(prop, delta) {
+  if (!selectedObject) return;
+  let current = parseFloat(selectedObject.style[prop]) || 
+      (prop.includes("width") ? selectedObject.offsetWidth : selectedObject.offsetHeight);
+  selectedObject.style[prop] = (current + delta) + "px";
+}
+
+function holdButtonPx(button, prop, delta) {
+  let frame;
+  const step = () => {
+    changeStylePx(prop, delta);
+    frame = requestAnimationFrame(step);
+  };
+  button.addEventListener("mousedown", e => { e.preventDefault(); step(); });
+  button.addEventListener("touchstart", e => { e.preventDefault(); step(); });
+  ["mouseup","mouseleave","touchend","touchcancel"].forEach(ev => {
+    button.addEventListener(ev, () => cancelAnimationFrame(frame));
+  });
+}
+
+holdButtonPx(document.getElementById("posx-plus"), "left", 2);
+holdButtonPx(document.getElementById("posx-minus"), "left", -2);
+holdButtonPx(document.getElementById("posy-plus"), "top", 2);
+holdButtonPx(document.getElementById("posy-minus"), "top", -2);
+holdButtonPx(document.getElementById("scalex-plus"), "width", 2);
+holdButtonPx(document.getElementById("scalex-minus"), "width", -2);
+holdButtonPx(document.getElementById("scaley-plus"), "height", 2);
+holdButtonPx(document.getElementById("scaley-minus"), "height", -2);
+
+document.getElementById("save-btn").addEventListener("click", () => {
+  if (!selectedObject) return;
+  const key = "object-" + selectedObject.id;
+  const data = {
+    left: selectedObject.style.left,
+    top: selectedObject.style.top,
+    width: selectedObject.style.width,
+    height: selectedObject.style.height
+  };
+  localStorage.setItem(key, JSON.stringify(data));
+  showMessage("Guardado");
+});
+
+document.getElementById("reset-btn").addEventListener("click", () => {
+  if (!selectedObject) return;
+  const original = factoryStyles.get(selectedObject);
+  if (!original) return;
+  selectedObject.style.left = original.left;
+  selectedObject.style.top = original.top;
+  selectedObject.style.width = original.width;
+  selectedObject.style.height = original.height;
+  showMessage("Restablecido");
+});
+
+document.getElementById("confirm-btn").addEventListener("click", () => {
+  panel.style.display = "none";
+});
+
+window.addEventListener("load", () => {
+  document.querySelectorAll("[id]").forEach(el => {
+    const key = "object-" + el.id;
+    const saved = localStorage.getItem(key);
+    if (saved) {
+      const data = JSON.parse(saved);
+      el.style.position = "absolute";
+      el.style.left = data.left;
+      el.style.top = data.top;
+      el.style.width = data.width;
+      el.style.height = data.height;
+    }
+  });
+});
+const initPanel = document.getElementById("init-panel");
+const yesBtn = document.getElementById("init-yes");
+const noBtn = document.getElementById("init-no");
+
+yesBtn.addEventListener("click", () => {
+  localStorage.clear(); // borra todo
+
+  // Mostramos mensaje indicando que cierre la app
+  initPanel.innerHTML = `
+    <p style="font-size: 18px; margin-bottom: 20px;">
+      LocalStorage borrado. Por favor, cierra el juego y vuelve a abrir para iniciar limpio,al volver a ver las opciones de "si" y "no" presiona [no] para no repetir este proceso.
+    </p>
+  `;
+});
+
+noBtn.addEventListener("click", () => {
+  initPanel.style.display = "none"; // solo ocultar panel
+});
+
+let fpsVisible = false;
+let fpsCounter = document.getElementById("fps-counter");
+let fpsToggle = document.getElementById("fps-toggle");
+
+let fpsValues = []; // guardamos varios FPS para hacer promedio
+let lastFrame = performance.now();
+
+// Alternar botón
+fpsToggle.addEventListener("click", () => {
+  fpsVisible = !fpsVisible;
+  fpsToggle.textContent = "mostrar fps: " + (fpsVisible ? "sí" : "no");
+  fpsCounter.style.display = fpsVisible ? "block" : "none";
+});
+
+// Loop para calcular fps por frame
+function frameLoop() {
+  let now = performance.now();
+  let delta = (now - lastFrame) / 1000; // en segundos
+  lastFrame = now;
+
+  let fps = 1 / delta;
+  fpsValues.push(fps);
+
+  requestAnimationFrame(frameLoop);
+}
+frameLoop();
+
+// Mostrar promedio cada 3 segundos
+setInterval(() => {
+  if (fpsVisible && fpsValues.length > 0) {
+    let sum = fpsValues.reduce((a, b) => a + b, 0);
+    let avg = Math.round(sum / fpsValues.length);
+    fpsCounter.textContent = "FPS: " + avg;
+    fpsValues = []; // vaciar para el siguiente ciclo
+  }
+}, 1000);
+
+const ROWS = 100;
+const CHUNK_SIZE = 20;
+
+// Texturas
+const textures = {};
+textures.grass = new Image(); textures.grass.src = 'Texturas/cesped_parte_costado.jpg';
+textures.dirt = new Image(); textures.dirt.src = 'Texturas/tierra.jpg';
+textures.stone = new Image(); textures.stone.src = 'Texturas/piedra.jpg';
+
+const crackTextures = [];
+for(let i=1;i<=5;i++){
+  const img = new Image();
+  img.src = `Texturas/crack${i}.png`;
+  crackTextures.push(img);
+}
+
+// Generación de chunks
+let chunks = {};
+function generateChunk(chunkX){
+  if(chunks[chunkX]) return chunks[chunkX];
+  let surfaceHeight = ROWS-50;
+  let currentHeight = surfaceHeight;
+  let data = [];
+  for(let x=0; x<CHUNK_SIZE; x++){
+    let worldX = chunkX*CHUNK_SIZE + x;
+    let change = Math.floor(Math.random()*3)-1;
+    currentHeight += change;
+    if(currentHeight<surfaceHeight-5) currentHeight = surfaceHeight-5;
+    if(currentHeight>surfaceHeight+2) currentHeight = surfaceHeight+2;
+    for(let y=0; y<ROWS; y++){
+      if(!data[y]) data[y] = [];
+      if(y<currentHeight) data[y][x] = null;
+      else if(y===currentHeight) data[y][x]='grass';
+      else if(y<currentHeight+3) data[y][x]='dirt';
+      else data[y][x]='stone';
+    }
+  }
+  chunks[chunkX] = {x: chunkX, data};
+  return chunks[chunkX];
+}
+const invBtn = document.getElementById('inventory-btn');
+const invPanel = document.getElementById('inventory-panel');
+
+invBtn.addEventListener('click', () => {
+  if (invPanel.style.display === 'none' || invPanel.style.display === '') {
+    invPanel.style.display = 'block'; // abrir
+  } else {
+    invPanel.style.display = 'none';  // cerrar
+  }
+});
+
+const pauseBtn = document.getElementById('pause-btn');
+const pauseMenu = document.getElementById('pause-menu');
+const settingsPanel = document.getElementById('settings-panel');
+const resumeBtn = document.getElementById('resume-btn');
+const exitBtn = document.getElementById('exit-btn');
+const settingsBtn = document.getElementById('settings-btn');
+const closeSettings = document.getElementById('close-settings');
+const blurBg = document.getElementById('blur-bg');
+
+pauseBtn.addEventListener('click', () => {
+  pauseMenu.style.display = 'flex';
+  blurBg.style.display = 'block';
+});
+
+resumeBtn.addEventListener('click', () => {
+  pauseMenu.style.display = 'none';
+  settingsPanel.classList.remove('active');
+  blurBg.style.display = 'none';
+});
+
+exitBtn.addEventListener('click', () => {
+  // Función para salir del juego
+});
+
+settingsBtn.addEventListener('click', () => {
+  settingsPanel.classList.add('active');
+});
+
+closeSettings.addEventListener('click', () => {
+  settingsPanel.classList.remove('active');
+});
+
+let inventory = new Array(27).fill(null); 
+let selectedSlot = 0; // slot seleccionado en hotbar
+
+function initInventorySelection() {
+  const allSlots = document.querySelectorAll('.slot');
+
+  allSlots.forEach((slot, i) => {
+    slot.dataset.index = i;
+    slot.addEventListener('click', () => {
+      if (selectedSlot !== null) {
+        allSlots[selectedSlot].classList.remove('selected');
+      }
+      selectedSlot = i;
+      slot.classList.add('selected');
+      console.log('Slot seleccionado:', i);
+    });
+  });
+}
+const buttons = ['left', 'right', 'jump', 'down', 'inventory-btn'];
+
+buttons.forEach(id => {
+  const btn = document.getElementById(id);
+
+  // al presionar
+  btn.addEventListener('touchstart', () => btn.classList.add('active'));
+  btn.addEventListener('mousedown', () => btn.classList.add('active'));
+
+  // al soltar
+  btn.addEventListener('touchend', () => btn.classList.remove('active'));
+  btn.addEventListener('mouseup', () => btn.classList.remove('active'));
+  btn.addEventListener('mouseleave', () => btn.classList.remove('active'));
+});
+
+function renderHotbar() {
+  const hotbars = [document.getElementById('hotbar-fixed'), document.querySelector('#inventory-panel #hotbar')];
+  hotbars.forEach(hb => {
+    const slots = hb.querySelectorAll('.slot');
+    slots.forEach((btn, i) => {
+      btn.innerHTML=''; // limpiar
+      if(i<inventory.length){
+        const slotData = inventory[i];
+        if(slotData){
+          const img = document.createElement('img');
+          img.src = slotData.texture;
+          img.style.width='100%';
+          img.style.height='100%';
+          btn.appendChild(img);
+
+          if(slotData.count>1){
+            if(slotData.count>1){
+  const countDiv = document.createElement('div');
+  countDiv.classList.add('count');
+  countDiv.textContent = slotData.count;
+  btn.appendChild(countDiv);
+}
+
+            const countDiv = document.createElement('div');
+            countDiv.style.position='absolute';
+            countDiv.style.bottom='2px';
+            countDiv.style.right='2px';
+            countDiv.style.color='white';
+            countDiv.style.fontSize='12px';
+            countDiv.textContent = slotData.count;
+            btn.appendChild(countDiv);
+          }
+        }
+      }
+      
+      btn.classList.toggle('selected', i===selectedSlot);
+      btn.dataset.index = i;
+      btn.onclick = ()=>{ selectedSlot=i; renderHotbar(); };
+    });
+  });
+}
+
+// inicializar
+initInventorySelection();
+
+function getBlock(wx, wy){
+  let chunkX = Math.floor(wx/CHUNK_SIZE);
+  let localX = wx - chunkX*CHUNK_SIZE;
+  let chunk = generateChunk(chunkX);
+  if(chunk.data[wy] && chunk.data[wy][localX] !== undefined) return chunk.data[wy][localX];
+  return null;
+}
+
+function setBlock(wx, wy, type){
+  let chunkX = Math.floor(wx/CHUNK_SIZE);
+  let localX = wx - chunkX*CHUNK_SIZE;
+  let chunk = generateChunk(chunkX);
+  if(chunk.data[wy]) chunk.data[wy][localX] = type;
+}
+
+function drawChunks(){
+  let startChunk = Math.floor((cameraX/BLOCK_SIZE)/CHUNK_SIZE) -1;
+  let endChunk = Math.floor((cameraX + width)/BLOCK_SIZE/CHUNK_SIZE) +1;
+  for(let cx=startChunk; cx<=endChunk; cx++){
+    let chunk = generateChunk(cx);
+    for(let y=0; y<ROWS; y++){
+      for(let x=0; x<CHUNK_SIZE; x++){
+        const type = chunk.data[y][x];
+        if(type){
+          const tex = textures[type];
+          if(tex.complete){
+            ctx.drawImage(tex, (cx*CHUNK_SIZE + x)*BLOCK_SIZE - cameraX, y*BLOCK_SIZE - cameraY, BLOCK_SIZE, BLOCK_SIZE);
+          }
+        }
+      }
+    }
+  }
+}
+
+
+
+document.getElementById('left').addEventListener('touchstart', () => {
+  leftPressed = true;
+  lastDirection = {dx:-1, dy:0};
+  player.facing = -1; // mirando izquierda
+});
+
+document.getElementById('right').addEventListener('touchstart', () => {
+  rightPressed = true;
+  lastDirection = {dx:1, dy:0};
+  player.facing = 1; // mirando derecha
+});
+
+// === Texturas del jugador ===
+const playerFrames = [];
+for (let i = 1; i <= 4; i++) {
+  const img = new Image();
+  img.src = `Texturas/Cubs${i}.png`;
+  playerFrames.push(img);
+}
+const crouchFrames = [];
+for (let i = 1; i <= 4; i++) {
+  const img = new Image();
+  img.src = `Texturas/Cub_agachado${i}.png`;
+  crouchFrames.push(img);
+}
+
+let crouching = false; // variable que indica si el jugador está agachado
+
+let currentFrame = 0;
+let frameTimer = 0;
+
+// Cambiamos el jugador a usar texturas
+let player = { 
+  x:5, y:30, width:0.8, height:0.8, 
+  vx:0, vy:0, onGround:false, 
+  facing: 1 // 1 = derecha, -1 = izquierda
+};
+
+// === Dibujar jugador con animación ===
+function drawPlayer(dt) {
+  const frames = crouching ? crouchFrames : playerFrames;
+
+  // actualizar frame solo si se mueve y no solo por estar agachado
+  if ((leftPressed || rightPressed)) {
+    frameTimer += dt;
+    if (frameTimer >= 0.2) { // 5 fps
+      frameTimer = 0;
+      currentFrame = (currentFrame + 1) % frames.length;
+    }
+  } else {
+    currentFrame = 0; // si no se mueve, siempre frame inicial
+  }
+
+  const img = frames[currentFrame];
+  if (!img.complete) return;
+
+  const px = player.x*BLOCK_SIZE - cameraX;
+  const py = player.y*BLOCK_SIZE - cameraY;
+  const pw = player.width*BLOCK_SIZE;
+  const ph = player.height*BLOCK_SIZE;
+
+  ctx.save();
+  if (player.facing === 1) {
+    ctx.translate(px + pw, 0);
+    ctx.scale(-1, 1);
+    ctx.drawImage(img, 0, py, pw, ph);
+  } else {
+    ctx.drawImage(img, px, py, pw, ph);
+  }
+  ctx.restore();
+}
+
+
+const gravity = 0.8;
+const jumpPower = -15;
+const playerSpeed = 0.12;
+let speed = crouching ? playerSpeed * 0.4 : playerSpeed;
+
+let cameraX=0, cameraY=0;
+
+function isBlock(wx, wy){ return getBlock(Math.floor(wx), Math.floor(wy)) !== null; }
+
+let collidingLeft=false, collidingRight=false, collidingTop=false, collidingBottom=false;
+function movePlayer() {
+  collidingLeft=false; collidingRight=false; collidingTop=false; collidingBottom=false;
+
+  // --- Lógica de soporte al agacharse ---
+  if(crouching && player.vx !== 0) {
+    let ny = player.y + player.height + 0.01;
+    let underCenter = isBlock(player.x + player.width/2, ny);
+
+    if(player.vx < 0) { // izquierda
+      let underLeft = isBlock(player.x, ny);
+      if(!underLeft && !underCenter) player.vx = 0;
+    } else if(player.vx > 0) { // derecha
+      let underRight = isBlock(player.x + player.width, ny);
+      if(!underRight && !underCenter) player.vx = 0;
+    }
+  }
+
+  // --- Movimiento horizontal normal ---
+  let nx = player.x + player.vx;
+  if(player.vx < 0){
+    if(!isBlock(nx, player.y) && !isBlock(nx + player.width, player.y) &&
+       !isBlock(nx, player.y + player.height - 0.01) && !isBlock(nx + player.width, player.y + player.height - 0.01)) {
+      player.x = nx;
+    } else { 
+      player.vx = 0; 
+      collidingLeft = true; 
+    }
+  } else if(player.vx > 0){
+    if(!isBlock(nx, player.y) && !isBlock(nx + player.width, player.y) &&
+       !isBlock(nx, player.y + player.height - 0.01) && !isBlock(nx + player.width, player.y + player.height - 0.01)) {
+      player.x = nx;
+    } else { 
+      player.vx = 0; 
+      collidingRight = true; 
+    }
+  }
+
+  // --- Movimiento vertical ---
+  player.vy += gravity;
+  let ny = player.y + player.vy / BLOCK_SIZE;
+  player.onGround = false;
+
+  if(player.vy > 0){ // cayendo
+    if(!isBlock(player.x, ny + player.height) && !isBlock(player.x + player.width, ny + player.height)) {
+      player.y = ny;
+    } else {
+      player.y = Math.floor(ny + player.height) - player.height;
+      player.vy = 0; 
+      player.onGround = true; 
+      collidingBottom = true;
+    }
+  } else if(player.vy < 0){ // subiendo
+    if(!isBlock(player.x, ny) && !isBlock(player.x + player.width, ny)) {
+      player.y = ny;
+    } else {
+      player.vy = 0; 
+      collidingTop = true;
+    }
+  }
+}
+
+function initInventorySlots() {
+  const allSlots = document.querySelectorAll('#inventory-grid .slot');
+  allSlots.forEach((slot, i)=>{
+    slot.dataset.index = i+9; // los 9 primeros slots son hotbar
+    slot.onclick = ()=>{
+      if(selectedSlot!==null) renderHotbar(); // quitar anterior selección
+      selectedSlot = parseInt(slot.dataset.index);
+      renderHotbar();
+      console.log('Slot seleccionado:', selectedSlot);
+    };
+  });
+}
+initInventorySlots();
+renderHotbar();
+
+// Última dirección presionada (por defecto derecha)
+// Última dirección presionada (por defecto derecha)
+let lastDirection = {dx:1, dy:0};
+
+// Variables de estado de los botones
+let leftPressed = false, rightPressed = false, jumpPressed = false, downPressed = false;
+
+// Controles táctiles y actualización de dirección
+document.getElementById('left').addEventListener('touchstart', () => {
+  leftPressed = true;
+  lastDirection = {dx:-1, dy:0};
+});
+document.getElementById('left').addEventListener('touchend', () => leftPressed=false);
+
+document.getElementById('right').addEventListener('touchstart', () => {
+  rightPressed = true;
+  lastDirection = {dx:1, dy:0};
+});
+document.getElementById('right').addEventListener('touchend', () => rightPressed=false);
+
+document.getElementById('jump').addEventListener('touchstart', () => {
+  jumpPressed = true;
+  lastDirection = {dx:0, dy:-1}; // arriba
+});
+document.getElementById('jump').addEventListener('touchend', () => jumpPressed=false);
+
+document.getElementById('down').addEventListener('touchstart', () => {
+  if (breakMode) {
+    lastDirection = {dx:0, dy:1}; // abajo
+  } else {
+    crouching = !crouching; // agacharse normal
+  }
+  downPressed = true;
+});
+document.getElementById('down').addEventListener('touchend', () => downPressed=false);
+
+document.getElementById('down').addEventListener('touchend', () => {
+  downPressed = false;
+});
+
+// Botón PRI
+let breakMode = false;
+const priBtn = document.getElementById('pri-btn');
+priBtn.addEventListener('touchstart', () => {
+  breakMode = !breakMode;
+  if(breakMode) priBtn.classList.add('active');
+  else { priBtn.classList.remove('active'); stopBreaking(); }
+});
+
+// Datos de bloques
+const blockData = {
+  'stone': {time:30},
+  'dirt': {time:5},
+  'grass': {time:5}
+};
+
+// Romper bloques
+let breaking = {active:false, wx:0, wy:0, progress:0, time:0, type:null, delay:0};
+
+function handleBreaking(dt){
+  if(!breakMode || !lastDirection) { stopBreaking(); return; }
+
+  // Calculamos bloque objetivo según última dirección
+  let wx, wy;
+
+if(lastDirection.dy > 0){
+  // romper abajo
+  wx = Math.floor(player.x + player.width/2);
+  wy = Math.floor(player.y + player.height);
+} else if(lastDirection.dy < 0){
+  // romper arriba
+  wx = Math.floor(player.x + player.width/2);
+  wy = Math.floor(player.y - 1);
+} else {
+  // romper izquierda/derecha
+  wx = Math.floor(player.x + lastDirection.dx);
+  wy = Math.floor(player.y + player.height/2);
+}
+
+
+  let type = getBlock(wx, wy);
+if(!type) { stopBreaking(); return; }
+
+// Si bloque nuevo o diferente, reinicia progreso
+if(!breaking.active || breaking.wx!==wx || breaking.wy!==wy){
+  breaking.active = true;
+  breaking.wx = wx;
+  breaking.wy = wy;
+  breaking.type = type;
+  breaking.time = 0;
+  breaking.progress = 0;
+  breaking.delay = 0;
+}
+
+
+  // Retardo antes de romper
+  breaking.delay += dt;
+  if(breaking.delay >= 0.5){
+    updateBreaking(dt);
+  }
+}
+
+function updateBreaking(dt){
+  if(!breaking.active) return;
+
+  let maxTime = 5; // por defecto
+  if(blockData[breaking.type]) maxTime = blockData[breaking.type].time;
+
+  breaking.time += dt;
+  breaking.progress = Math.min(breaking.time/maxTime,1);
+
+  if(breaking.progress >= 1){
+    setBlock(breaking.wx, breaking.wy, null);
+    
+  }
+}
+
+function stopBreaking(){
+  breaking.active=false;
+  breaking.wx=0; breaking.wy=0; breaking.type=null; breaking.time=0; breaking.progress=0; breaking.delay=0;
+}
+function updateBreaking(dt){
+  if(!breaking.active) return;
+  let maxTime = 5; 
+  if(blockData[breaking.type]) maxTime = blockData[breaking.type].time;
+  breaking.time += dt;
+  breaking.progress = Math.min(breaking.time/maxTime,1);
+
+  if(breaking.progress>=1){
+    setBlock(breaking.wx, breaking.wy,null);
+    addItem(breaking.type); // se añade al inventario
+    stopBreaking();
+  }
+}
+
+function drawBreaking(){
+  if(breaking.active && breaking.type){
+    let stage = Math.floor(breaking.progress*4);
+    let img = crackTextures[stage];
+    if(img.complete) ctx.drawImage(img, breaking.wx*BLOCK_SIZE-cameraX, breaking.wy*BLOCK_SIZE-cameraY, BLOCK_SIZE, BLOCK_SIZE);
+  }
+}
+function addItem(type){
+  const textureMap = {stone:'Texturas/piedra.jpg', dirt:'Texturas/tierra.jpg', grass:'Texturas/cesped_parte_costado.jpg'};
+  let tex = textureMap[type];
+  // Buscar stack existente
+  let slot = inventory.find(s => s && s.type===type);
+  if(slot){ slot.count++; renderHotbar(); return; }
+  // Buscar primer slot vacío
+  let emptyIndex = inventory.findIndex(s=>!s);
+  if(emptyIndex>=0){ inventory[emptyIndex]={type, texture:tex, count:1}; renderHotbar(); }
+  else console.log('Inventario lleno');
+}
+function placeBlock(wx, wy){
+  const slot = inventory[selectedSlot];
+  if(!slot) return;
+  if(getBlock(wx, wy)===null){
+    setBlock(wx, wy, slot.type);
+    slot.count--;
+    if(slot.count<=0) inventory[selectedSlot]=null;
+    renderHotbar();
+  }
+}
+
+// Touch para colocar bloque
+canvas.addEventListener('touchstart', e=>{
+  const touch = e.touches[0];
+  const rect = canvas.getBoundingClientRect();
+  const cx = touch.clientX - rect.left;
+  const cy = touch.clientY - rect.top;
+
+  const wx = Math.floor((cx + cameraX)/BLOCK_SIZE);
+  const wy = Math.floor((cy + cameraY)/BLOCK_SIZE);
+  placeBlock(wx, wy);
+});
+function placeBlock(wx, wy){
+  const slot = inventory[selectedSlot];
+  if(!slot) return;
+  if(getBlock(wx, wy)===null){
+    setBlock(wx, wy, slot.type);
+    slot.count--;
+    if(slot.count<=0) inventory[selectedSlot]=null;
+    renderHotbar();
+  }
+}
+
+// Touch para colocar bloque
+canvas.addEventListener('touchstart', e=>{
+  const touch = e.touches[0];
+  const rect = canvas.getBoundingClientRect();
+  const cx = touch.clientX - rect.left;
+  const cy = touch.clientY - rect.top;
+
+  const wx = Math.floor((cx + cameraX)/BLOCK_SIZE);
+  const wy = Math.floor((cy + cameraY)/BLOCK_SIZE);
+  placeBlock(wx, wy);
+});
+
+// Juego principal
+let lastTime = performance.now();
+function gameLoop(time){
+  let dt = (time - lastTime)/1000;
+  lastTime = time;
+
+  ctx.clearRect(0,0,width,height);
+
+// velocidad dinámica: normal o agachado
+let speed = crouching ? playerSpeed * 0.4 : playerSpeed;
+
+player.vx = 0;
+if (leftPressed) player.vx = -speed;
+if (rightPressed) player.vx = speed;
+
+if (jumpPressed && player.onGround) player.vy = jumpPower;
+
+  movePlayer();
+  cameraX = player.x*BLOCK_SIZE - width/2 + BLOCK_SIZE/2;
+  cameraY = player.y*BLOCK_SIZE - height/2 + BLOCK_SIZE/2;
+
+  handleBreaking(dt);
+  updateBreaking(dt);
+
+  drawChunks();
+  drawBreaking();
+
+  drawPlayer(dt);
+
+  requestAnimationFrame(gameLoop);
+}
+gameLoop();
 </script>
 </body>
 </html>
