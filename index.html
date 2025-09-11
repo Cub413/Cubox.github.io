@@ -7,28 +7,46 @@
 <style>
     html, body { margin: 0; padding: 0; overflow: hidden; width: 100%; height: 100%; background: #87ceeb; }
     canvas { display: block; width: 100%; height: 100%; filter: blur(2px); }
+
     button {
         position: fixed;
         left: 50%;
         transform: translateX(-50%);
-        width: 60px;
+        width: 100px;
         height: 40px;
         background-color: rgba(100,100,100,0.6);
         color: white;
         border: 2px solid white;
         border-radius: 6px;
         font-weight: bold;
+        font-size: 14px;
         cursor: pointer;
         z-index: 1000;
         touch-action: manipulation;
         display: flex;
         justify-content: center;
         align-items: center;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        box-sizing: border-box;
     }
+
     #start-btn { top: 50%; transform: translate(-50%, -50%); }
-    #play-btn { top: 50%; transform: translate(-50%, -50%); display: none; }
+    #play-btn { top: 50%; transform: translate(-50%, -50%); display: none; margin-bottom: 50px;}
     #settings-btn { top: 50%; transform: translate(-50%, -50%); display: none; margin-top: 60px; }
-    #orientation-img { position: fixed; top:0; left:0; width:100%; height:100%; object-fit: cover; display:none; z-index:1000; }
+
+  #orientation-img {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    object-fit: contain;  /* mantiene proporción y se adapta */
+    display: none;
+    z-index: 1000;
+}
+
     #title {
         position: fixed;
         font-family: 'Press Start 2P', monospace;
@@ -123,12 +141,6 @@ function animate(){
 }
 animate();
 
-window.addEventListener('resize', ()=>{
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-    updateUI();
-});
-
 // ===== UI y fullscreen =====
 const startBtn = document.getElementById('start-btn');
 const playBtn = document.getElementById('play-btn');
@@ -167,7 +179,13 @@ startBtn.addEventListener('click', ()=>{
 });
 
 playBtn.addEventListener('click', ()=>{
-    window.location.href = 'game.html';
+    // Ir a game.html sin salir del fullscreen
+    fetch('game.html').then(r => r.text()).then(html=>{
+        document.open();
+        document.write(html);
+        document.close();
+        if(document.documentElement.requestFullscreen) document.documentElement.requestFullscreen();
+    });
 });
 
 window.addEventListener('resize', updateUI);
