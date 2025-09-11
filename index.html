@@ -342,11 +342,36 @@ button:active {
   background: #0f0;
   color: #222;
 }
+#orientation-panel {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  backdrop-filter: blur(8px);
+  background-color: rgba(0,0,0,0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+}
+
+#orientation-panel img {
+  max-width: 80%;
+  max-height: 80%;
+}
+
+.hidden {
+  display: none;
+}
 
 </style>
 </head>
 <body>
-  
+  <div id="orientation-panel">
+  <img src="Texturas/horizontal.png" alt="Gira pantalla">
+</div>
+
   <!-- Panel inicial -->
 <div id="init-panel" style="
   position: fixed;
@@ -502,6 +527,27 @@ function setZoom(level) {
 }
 let selectedObject = null;
 const factoryStyles = new WeakMap();
+const panel2 = document.getElementById('orientation-panel');
+
+// Solo mostrar el panel si se carga en vertical
+if(window.innerWidth > window.innerHeight){
+  panel2.style.display = 'none';
+}
+
+let lastOrientation = window.innerWidth > window.innerHeight;
+
+setInterval(() => {
+  const isHorizontal = window.innerWidth > window.innerHeight;
+
+  if(isHorizontal !== lastOrientation){
+    lastOrientation = isHorizontal;
+
+    // Si gira a horizontal desde vertical, recarga
+    if(isHorizontal){
+      location.reload();
+    }
+  }
+}, 300);
 
 const panel = document.getElementById("object-controls");
 const msgBox = document.getElementById("panel-msg");
