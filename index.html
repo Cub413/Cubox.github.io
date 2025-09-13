@@ -172,23 +172,8 @@ canvas { display:block; background:#87CEEB; }
   background-color: rgba(200, 50, 50, 0.7);
 }
 
-#hotbar-fixed {
-  position: fixed;
-  bottom: 15px;           /* posición un poco más arriba */
-  left: 50%;
-  transform: translateX(-50%);
-  display: flex;
-  gap: 5px;               /* espacio moderado entre slots */
-  background: rgba(0,0,0,0.6);
-  padding: 5px;           /* padding moderado */
-  border-radius: 6px;     /* bordes redondeados moderados */
-  z-index: 20;
-}
 
-#hotbar-fixed .slot {
-  width: 30px;            /* tamaño de slots más cómodo */
-  height: 30px;
-}
+
 .control-btn.active {
   outline: 3px solid yellow; /* borde sin afectar tamaño */
   border: 2px solid white;   /* borde original se mantiene */
@@ -198,64 +183,6 @@ canvas { display:block; background:#87CEEB; }
 
 
 
-#inventory-panel {
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  background: rgba(30,30,30,0.9);
-  padding: 15px;
-  border-radius: 10px;
-  display: none; /* lo puedes mostrar/ocultar con JS */
-  z-index: 30;
-}
-
-#inventory-grid {
-  display: grid;
-  grid-template-columns: repeat(9, 1fr);
-  gap: 5px;
-  margin-bottom: 10px;
-}
-
-#hotbar {
-  display: flex;
-  gap: 2px;
-  justify-content: center;
-}
-
-.slot {
-  width: 45px;
-  height: 45px;
-  background: #ccc;
-  border: 2px solid #555;
-  border-radius: 4px;
-  cursor: pointer;
-  outline: none;
-  -webkit-tap-highlight-color: transparent;
-  position: relative; /* ← importante para el contador */
-  overflow: hidden;
-}
-
-.slot div.count {
-  position: absolute;
-  bottom: 2px;
-  right: 2px;
-  color: white;
-  font-size: 12px;
-  font-weight: bold;
-  pointer-events: none;
-}
-
-.slot.selected {
-  border: 2px solid yellow;
-  box-shadow: none; /* quitamos el efecto interno */
-}
-.slot img {
-  width: 100%;
-  height: 100%;
-  object-fit: contain; /* mantiene proporción sin deformar */
-  pointer-events: none; /* para que el click vaya al slot */
-}
 
 #inventory-btn {
   position: fixed;
@@ -364,6 +291,119 @@ button:active {
 .hidden {
   display: none;
 }
+/* ===== INVENTARIO GENERAL ===== */
+#inventory-panel {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(20,20,20,0.95);
+  padding: 12px;
+  border: 3px solid #555;
+  border-radius: 8px;
+  display: none; /* Se muestra al abrir inventario */
+  z-index: 30;
+  font-family: monospace;
+  color: white;
+  transform-origin: center;
+  zoom: 0.8; /* Ajusta tamaño general */
+}
+
+/* Grid del inventario (9x3) */
+#inventory-grid {
+  display: grid;
+  grid-template-columns: repeat(9, 36px);
+  gap: 4px;
+  margin-bottom: 10px;
+  justify-content: center;
+}
+
+/* Hotbar dentro del inventario */
+#hotbar {
+  display: flex;
+  gap: 4px;
+  justify-content: center;
+  margin-top: 8px;
+}
+
+/* ===== SLOTS ===== */
+.slot {
+  width: 36px;
+  height: 36px;
+  background: #333;
+  border: 2px solid #777;
+  border-radius: 3px;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+}
+
+.slot img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  pointer-events: none;
+}
+
+.slot.selected {
+  border: 2px solid yellow;
+}
+
+
+/* ===== CRAFTING ===== */
+#crafting-section {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+/* Grid de 2x2 */
+#crafting-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 36px);
+  grid-template-rows: repeat(2, 36px);
+  gap: 4px;
+}
+
+.craft-slot {
+  background: #444;
+  border: 2px solid #777;
+}
+
+/* Flecha de crafteo */
+.arrow {
+  font-size: 18px;
+  font-weight: bold;
+  color: white;
+}
+
+/* Resultado de crafteo */
+#craft-result {
+  background: #555;
+  border: 2px solid #aaa;
+}
+
+/* ===== HOTBAR FIJA EN PANTALLA ===== */
+#hotbar-fixed {
+  position: fixed;
+  bottom: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 4px;
+  background: rgba(0,0,0,0.5);
+  padding: 4px;
+  border-radius: 6px;
+  z-index: 20;
+}
+
+#hotbar-fixed .slot {
+  width: 34px;
+  height: 34px;
+}
+
 
 </style>
 </head>
@@ -458,35 +498,79 @@ button:active {
 <!-- Botón para abrir inventario -->
 <button id="inventory-btn">INV</button>
 
-<div id="hotbar-fixed">
-  <button class="slot"></button><button class="slot"></button><button class="slot"></button>
-  <button class="slot"></button><button class="slot"></button><button class="slot"></button>
-  <button class="slot"></button><button class="slot"></button><button class="slot"></button>
-</div>
-
-<!-- Inventario completo -->
+<!-- INVENTARIO Y CRAFTING -->
 <div id="inventory-panel">
+  <!-- Grid del inventario 9x3 -->
   <div id="inventory-grid">
-    <!-- 27 slots (9x3) -->
-    <button class="slot"></button><button class="slot"></button><button class="slot"></button>
-    <button class="slot"></button><button class="slot"></button><button class="slot"></button>
-    <button class="slot"></button><button class="slot"></button><button class="slot"></button>
+    <!-- 27 slots de ejemplo -->
+    <button class="slot"></button>
+    <button class="slot"></button>
+    <button class="slot"></button>
+    <button class="slot"></button>
+    <button class="slot"></button>
+    <button class="slot"></button>
+    <button class="slot"></button>
+    <button class="slot"></button>
+    <button class="slot"></button>
+    
+    <button class="slot"></button>
+    <button class="slot"></button>
+    <button class="slot"></button>
+    <button class="slot"></button>
+    <button class="slot"></button>
+    <button class="slot"></button>
+    <button class="slot"></button>
+    <button class="slot"></button>
+    <button class="slot"></button>
 
-    <button class="slot"></button><button class="slot"></button><button class="slot"></button>
-    <button class="slot"></button><button class="slot"></button><button class="slot"></button>
-    <button class="slot"></button><button class="slot"></button><button class="slot"></button>
+    <button class="slot"></button>
+    <button class="slot"></button>
+    <button class="slot"></button>
+    <button class="slot"></button>
+    <button class="slot"></button>
+    <button class="slot"></button>
+    <button class="slot"></button>
+    <button class="slot"></button>
+    <button class="slot"></button>
+  </div>
 
-    <button class="slot"></button><button class="slot"></button><button class="slot"></button>
-    <button class="slot"></button><button class="slot"></button><button class="slot"></button>
-    <button class="slot"></button><button class="slot"></button><button class="slot"></button>
+  <!-- Crafting 2x2 -->
+  <div id="crafting-section">
+    <div id="crafting-grid">
+      <button class="slot craft-slot"></button>
+      <button class="slot craft-slot"></button>
+      <button class="slot craft-slot"></button>
+      <button class="slot craft-slot"></button>
+    </div>
+    <div class="arrow">➡</div>
+    <button class="slot" id="craft-result"></button>
   </div>
 
   <!-- Hotbar dentro del inventario -->
   <div id="hotbar">
-    <button class="slot"></button><button class="slot"></button><button class="slot"></button>
-    <button class="slot"></button><button class="slot"></button><button class="slot"></button>
-    <button class="slot"></button><button class="slot"></button><button class="slot"></button>
+    <button class="slot"></button>
+    <button class="slot"></button>
+    <button class="slot"></button>
+    <button class="slot"></button>
+    <button class="slot"></button>
+    <button class="slot"></button>
+    <button class="slot"></button>
+    <button class="slot"></button>
+    <button class="slot"></button>
   </div>
+</div>
+
+<!-- Hotbar fija abajo -->
+<div id="hotbar-fixed">
+  <button class="slot"></button>
+  <button class="slot"></button>
+  <button class="slot"></button>
+  <button class="slot"></button>
+  <button class="slot"></button>
+  <button class="slot"></button>
+  <button class="slot"></button>
+  <button class="slot"></button>
+  <button class="slot"></button>
 </div>
 
 
@@ -503,7 +587,9 @@ button:active {
 
 <div id="pri-container">
   <div class="control-btn" id="pri-btn">PRI</div>
+  <div class="control-btn" id="pri-bg-btn">BG</div>
 </div>
+
 </div>
 
 <script>
@@ -740,6 +826,8 @@ const textures = {};
 textures.grass = new Image(); textures.grass.src = 'Texturas/cesped_parte_costado.jpg';
 textures.dirt = new Image(); textures.dirt.src = 'Texturas/tierra.jpg';
 textures.stone = new Image(); textures.stone.src = 'Texturas/piedra.jpg';
+textures.leaf = new Image();  textures.leaf.src = 'Texturas/oja.png';
+textures.log  = new Image();  textures.log.src  = 'Texturas/tronco.png';
 
 const crackTextures = [];
 for(let i=1;i<=5;i++){
@@ -772,6 +860,39 @@ function generateChunk(chunkX){
   chunks[chunkX] = {x: chunkX, data};
   return chunks[chunkX];
 }
+// === Capa de fondo (segunda capa) ===
+let chunksBg = {};
+
+function generateChunkBg(chunkX){
+  if(chunksBg[chunkX]) return chunksBg[chunkX];
+
+  let chunk = generateChunk(chunkX); 
+  let data = [];
+
+  for(let y=0; y<ROWS; y++){
+    data[y] = [];
+    for(let x=0; x<CHUNK_SIZE; x++){
+      data[y][x] = chunk.data[y][x];
+    }
+  }
+
+  // 🌳 Generación de árboles
+  for(let x=0; x<CHUNK_SIZE; x++){
+    for(let y=0; y<ROWS; y++){
+      if(data[y][x] === 'grass'){ 
+        // 10% de probabilidad de árbol en ese bloque
+        if(Math.random() < 0.1){
+          generateTree({data}, x, y);
+        }
+      }
+    }
+  }
+
+  chunksBg[chunkX] = {x: chunkX, data};
+  return chunksBg[chunkX];
+}
+
+
 const invBtn = document.getElementById('inventory-btn');
 const invPanel = document.getElementById('inventory-panel');
 
@@ -817,22 +938,115 @@ closeSettings.addEventListener('click', () => {
 
 let inventory = new Array(27).fill(null); 
 let selectedSlot = 0; // slot seleccionado en hotbar
+function generateTree(chunkBg, localX, groundY){
+  // altura del tronco entre 3 y 5
+  let height = 3 + Math.floor(Math.random()*3);
+
+  // tronco
+  for(let h=0; h<height; h++){
+    if(chunkBg.data[groundY-h-1]) // aseguramos que exista fila
+      chunkBg.data[groundY-h-1][localX] = 'log';
+  }
+
+  // hojas (alrededor de la punta)
+  let top = groundY - height;
+  for(let dx=-2; dx<=2; dx++){
+    for(let dy=-2; dy<=2; dy++){
+      let dist = Math.abs(dx) + Math.abs(dy);
+      if(dist <= 2){ // forma de cruz / redondeada
+        let yy = top+dy;
+        let xx = localX+dx;
+        if(chunkBg.data[yy] && chunkBg.data[yy][xx]!==undefined && chunkBg.data[yy][xx]===null){
+          chunkBg.data[yy][xx] = 'leaf';
+        }
+      }
+    }
+  }
+}
 
 function initInventorySelection() {
-  const allSlots = document.querySelectorAll('.slot');
-
+  const allSlots = document.querySelectorAll('#inventory-grid .slot');
   allSlots.forEach((slot, i) => {
-    slot.dataset.index = i;
-    slot.addEventListener('click', () => {
-      if (selectedSlot !== null) {
-        allSlots[selectedSlot].classList.remove('selected');
-      }
-      selectedSlot = i;
-      slot.classList.add('selected');
-      console.log('Slot seleccionado:', i);
-    });
+    slot.dataset.type = 'inv';
+    slot.dataset.index = i + 9; // Inventario grande ocupa 9–35
   });
 }
+
+
+let pickedSlot = null;
+
+function enableTouchInventory() {
+  const allSlots = document.querySelectorAll(
+    '#inventory-grid .slot, #hotbar .slot, #hotbar-fixed .slot, #crafting-grid .slot'
+  );
+
+  allSlots.forEach((slot, i) => {
+    // Detectar si es crafteo o inventario
+    if (slot.closest('#crafting-grid')) {
+      slot.dataset.type = 'craft';
+      slot.dataset.index = i % 4; // 0–3
+    } else {
+      slot.dataset.type = 'inv';
+      // dataset.index ya lo asignan renderHotbar/initInventorySlots
+    }
+
+    slot.onclick = () => {
+      if (!pickedSlot) {
+        // Primer toque → seleccionar
+        pickedSlot = slot;
+        slot.classList.add('selected');
+      } else if (pickedSlot === slot) {
+        // Segundo toque en el mismo → cancelar
+        slot.classList.remove('selected');
+        pickedSlot = null;
+      } else {
+        // Segundo toque en otro slot → mover/intercambiar
+        const fromType = pickedSlot.dataset.type;
+        const toType   = slot.dataset.type;
+        const fromIdx  = parseInt(pickedSlot.dataset.index);
+        const toIdx    = parseInt(slot.dataset.index);
+
+        if (fromType === 'inv' && toType === 'inv') {
+          // Inventario ↔ Inventario
+          let temp = inventory[toIdx];
+          inventory[toIdx] = inventory[fromIdx];
+          inventory[fromIdx] = temp;
+          renderHotbar();
+        }
+
+        if (fromType === 'craft' && toType === 'craft') {
+          // Craft ↔ Craft
+          let temp = craftingGrid[toIdx];
+          craftingGrid[toIdx] = craftingGrid[fromIdx];
+          craftingGrid[fromIdx] = temp;
+          renderCrafting();
+        }
+
+        if (fromType === 'inv' && toType === 'craft') {
+          // Inventario → Craft
+          craftingGrid[toIdx] = inventory[fromIdx];
+          inventory[fromIdx] = null;
+          renderHotbar();
+          renderCrafting();
+        }
+
+        if (fromType === 'craft' && toType === 'inv') {
+          // Craft → Inventario
+          inventory[toIdx] = craftingGrid[fromIdx];
+          craftingGrid[fromIdx] = null;
+          renderHotbar();
+          renderCrafting();
+        }
+
+        // limpiar selección de ambos
+        pickedSlot.classList.remove('selected');
+        slot.classList.remove('selected');
+        pickedSlot = null;
+      }
+    };
+  });
+}
+
 const buttons = ['left', 'right', 'jump', 'down', 'inventory-btn'];
 
 buttons.forEach(id => {
@@ -907,11 +1121,47 @@ function setBlock(wx, wy, type){
   let chunk = generateChunk(chunkX);
   if(chunk.data[wy]) chunk.data[wy][localX] = type;
 }
+// ==== Manejo de la capa 2 (fondo) ====
+function getBlockBg(wx, wy){
+  let chunkX = Math.floor(wx/CHUNK_SIZE);
+  let localX = wx - chunkX*CHUNK_SIZE;
+  let chunk = generateChunkBg(chunkX);
+  if(chunk.data[wy] && chunk.data[wy][localX] !== undefined) return chunk.data[wy][localX];
+  return null;
+}
+
+function setBlockBg(wx, wy, type){
+  let chunkX = Math.floor(wx/CHUNK_SIZE);
+  let localX = wx - chunkX*CHUNK_SIZE;
+  let chunk = generateChunkBg(chunkX);
+  if(chunk.data[wy]) chunk.data[wy][localX] = type;
+}
 
 function drawChunks(){
   let startChunk = Math.floor((cameraX/BLOCK_SIZE)/CHUNK_SIZE) -1;
   let endChunk = Math.floor((cameraX + width)/BLOCK_SIZE/CHUNK_SIZE) +1;
+
   for(let cx=startChunk; cx<=endChunk; cx++){
+    // --- Fondo (capa 2, más oscuro) ---
+    let chunkBg = generateChunkBg(cx);
+    for(let y=0; y<ROWS; y++){
+      for(let x=0; x<CHUNK_SIZE; x++){
+        const type = chunkBg.data[y][x];
+        if(type){
+          const tex = textures[type];
+          if(tex.complete){
+            ctx.save();
+            ctx.globalAlpha = 0.9; // hace más oscuro
+            ctx.drawImage(tex, (cx*CHUNK_SIZE + x)*BLOCK_SIZE - cameraX, y*BLOCK_SIZE - cameraY, BLOCK_SIZE, BLOCK_SIZE);
+            ctx.fillStyle = "rgba(0,0,0,0.3)"; // sombra encima
+            ctx.fillRect((cx*CHUNK_SIZE + x)*BLOCK_SIZE - cameraX, y*BLOCK_SIZE - cameraY, BLOCK_SIZE, BLOCK_SIZE);
+            ctx.restore();
+          }
+        }
+      }
+    }
+
+    // --- Frente (capa original, interactuable) ---
     let chunk = generateChunk(cx);
     for(let y=0; y<ROWS; y++){
       for(let x=0; x<CHUNK_SIZE; x++){
@@ -926,8 +1176,6 @@ function drawChunks(){
     }
   }
 }
-
-
 
 document.getElementById('left').addEventListener('touchstart', () => {
   leftPressed = true;
@@ -1087,6 +1335,96 @@ function initInventorySlots() {
 }
 initInventorySlots();
 renderHotbar();
+let craftingGrid = new Array(4).fill(null); // 2x2
+let craftResult = null;
+
+function initCraftingSlots(){
+  const craftSlots = document.querySelectorAll('.craft-slot');
+  craftSlots.forEach((slot, i)=>{
+    slot.dataset.index = i;
+    slot.onclick = ()=>{
+      // mover ítem desde inventario al slot de crafteo
+      if(inventory[selectedSlot]){
+        craftingGrid[i] = {...inventory[selectedSlot]};
+        // quitar del inventario
+        inventory[selectedSlot].count--;
+        if(inventory[selectedSlot].count<=0) inventory[selectedSlot]=null;
+        renderHotbar();
+        renderCrafting();
+        checkRecipes();
+      }
+    };
+  });
+
+  document.getElementById('craft-result').onclick = ()=>{
+    if(craftResult){
+      addItem(craftResult.type);
+      // limpiar crafting grid
+      craftingGrid = new Array(4).fill(null);
+      craftResult = null;
+      renderCrafting();
+      renderHotbar();
+    }
+  };
+}
+
+function renderCrafting(){
+  const craftSlots = document.querySelectorAll('.craft-slot');
+  craftSlots.forEach((slot, i)=>{
+    slot.innerHTML='';
+    let item = craftingGrid[i];
+    if(item){
+      const img = document.createElement('img');
+      img.src = item.texture;
+      slot.appendChild(img);
+    }
+  });
+
+  // resultado
+  const resultSlot = document.getElementById('craft-result');
+  resultSlot.innerHTML='';
+  if(craftResult){
+    const img = document.createElement('img');
+    img.src = craftResult.texture;
+    resultSlot.appendChild(img);
+  }
+}
+
+initCraftingSlots();
+const recipes = [
+  {
+    pattern: ['log', null,
+              null, null],
+    result: {type:'plank', texture:'Texturas/tablon.png'}
+  },
+  {
+    pattern: ['plank','plank',
+              'plank','plank'],
+    result: {type:'crafting_table', texture:'Texturas/mesa_de_crafteo.png'}
+  }
+];
+
+function checkRecipes(){
+  craftResult = null;
+
+  for(let recipe of recipes){
+    let match = true;
+    for(let i=0;i<4;i++){
+      let need = recipe.pattern[i];
+      let has = craftingGrid[i] ? craftingGrid[i].type : null;
+      if(need !== has){
+        match = false;
+        break;
+      }
+    }
+    if(match){
+      craftResult = recipe.result;
+      break;
+    }
+  }
+
+  renderCrafting();
+}
 
 // Última dirección presionada (por defecto derecha)
 // Última dirección presionada (por defecto derecha)
@@ -1129,98 +1467,118 @@ document.getElementById('down').addEventListener('touchend', () => {
 });
 
 // Botón PRI
-let breakMode = false;
+// === Botones PRI y BG ===
+let breakMode = false;     // capa 1
+let breakBgMode = false;   // capa 2
+
 const priBtn = document.getElementById('pri-btn');
+const priBgBtn = document.getElementById('pri-bg-btn');
+
+// PRI (frente)
 priBtn.addEventListener('touchstart', () => {
   breakMode = !breakMode;
-  if(breakMode) priBtn.classList.add('active');
-  else { priBtn.classList.remove('active'); stopBreaking(); }
+  if(breakMode){
+    priBtn.classList.add('active');
+    breakBgMode = false;
+    priBgBtn.classList.remove('active');
+  } else {
+    priBtn.classList.remove('active');
+    stopBreaking();
+  }
+});
+
+// BG (fondo)
+priBgBtn.addEventListener('touchstart', () => {
+  breakBgMode = !breakBgMode;
+  if(breakBgMode){
+    priBgBtn.classList.add('active');
+    breakMode = false;
+    priBtn.classList.remove('active');
+  } else {
+    priBgBtn.classList.remove('active');
+    stopBreaking();
+  }
 });
 
 // Datos de bloques
 const blockData = {
   'stone': {time:30},
   'dirt': {time:5},
-  'grass': {time:5}
+  'grass': {time:5},
+  'log': {time:15},   // tronco → más resistente
+  'leaf': {time:3}    // hoja → muy rápido
 };
+
 
 // Romper bloques
 let breaking = {active:false, wx:0, wy:0, progress:0, time:0, type:null, delay:0};
 
 function handleBreaking(dt){
-  if(!breakMode || !lastDirection) { stopBreaking(); return; }
+  if((!breakMode && !breakBgMode) || !lastDirection) { stopBreaking(); return; }
 
   // Calculamos bloque objetivo según última dirección
   let wx, wy;
+  if(lastDirection.dy > 0){
+    wx = Math.floor(player.x + player.width/2);
+    wy = Math.floor(player.y + player.height);
+  } else if(lastDirection.dy < 0){
+    wx = Math.floor(player.x + player.width/2);
+    wy = Math.floor(player.y - 1);
+  } else {
+    wx = Math.floor(player.x + lastDirection.dx);
+    wy = Math.floor(player.y + player.height/2);
+  }
 
-if(lastDirection.dy > 0){
-  // romper abajo
-  wx = Math.floor(player.x + player.width/2);
-  wy = Math.floor(player.y + player.height);
-} else if(lastDirection.dy < 0){
-  // romper arriba
-  wx = Math.floor(player.x + player.width/2);
-  wy = Math.floor(player.y - 1);
-} else {
-  // romper izquierda/derecha
-  wx = Math.floor(player.x + lastDirection.dx);
-  wy = Math.floor(player.y + player.height/2);
-}
+  // --- Diferencia entre capa 1 y capa 2 ---
+  let type = breakMode ? getBlock(wx, wy) : getBlockBg(wx, wy);
 
+  if(!type) { stopBreaking(); return; }
 
-  let type = getBlock(wx, wy);
-if(!type) { stopBreaking(); return; }
+  if(!breaking.active || breaking.wx!==wx || breaking.wy!==wy){
+    breaking.active = true;
+    breaking.wx = wx;
+    breaking.wy = wy;
+    breaking.type = type;
+    breaking.time = 0;
+    breaking.progress = 0;
+    breaking.delay = 0;
+  }
 
-// Si bloque nuevo o diferente, reinicia progreso
-if(!breaking.active || breaking.wx!==wx || breaking.wy!==wy){
-  breaking.active = true;
-  breaking.wx = wx;
-  breaking.wy = wy;
-  breaking.type = type;
-  breaking.time = 0;
-  breaking.progress = 0;
-  breaking.delay = 0;
-}
-
-
-  // Retardo antes de romper
   breaking.delay += dt;
   if(breaking.delay >= 0.5){
     updateBreaking(dt);
   }
 }
 
+
 function updateBreaking(dt){
   if(!breaking.active) return;
 
-  let maxTime = 5; // por defecto
+  let maxTime = 5;
   if(blockData[breaking.type]) maxTime = blockData[breaking.type].time;
 
   breaking.time += dt;
   breaking.progress = Math.min(breaking.time/maxTime,1);
 
-  if(breaking.progress >= 1){
-    setBlock(breaking.wx, breaking.wy, null);
-    
+  if(breaking.progress>=1){
+    if(breakMode){
+      // rompe capa 1
+      setBlock(breaking.wx, breaking.wy, null);
+      addItem(breaking.type);
+    } 
+    else if(breakBgMode){
+      // rompe capa 2
+      setBlockBg(breaking.wx, breaking.wy, null);
+      addItem(breaking.type);   // ✅ ahora sí agrega al inventario
+    }
+
+    stopBreaking();
   }
 }
 
 function stopBreaking(){
   breaking.active=false;
   breaking.wx=0; breaking.wy=0; breaking.type=null; breaking.time=0; breaking.progress=0; breaking.delay=0;
-}
-function updateBreaking(dt){
-  if(!breaking.active) return;
-  let maxTime = 5; 
-  if(blockData[breaking.type]) maxTime = blockData[breaking.type].time;
-  breaking.time += dt;
-  breaking.progress = Math.min(breaking.time/maxTime,1);
-
-  if(breaking.progress>=1){
-    setBlock(breaking.wx, breaking.wy,null);
-    addItem(breaking.type); // se añade al inventario
-    stopBreaking();
-  }
 }
 
 function drawBreaking(){
@@ -1231,16 +1589,34 @@ function drawBreaking(){
   }
 }
 function addItem(type){
-  const textureMap = {stone:'Texturas/piedra.jpg', dirt:'Texturas/tierra.jpg', grass:'Texturas/cesped_parte_costado.jpg'};
+  const textureMap = {
+    stone: 'Texturas/piedra.jpg',
+    dirt: 'Texturas/tierra.jpg',
+    grass: 'Texturas/cesped_parte_costado.jpg',
+    leaf: 'Texturas/oja.png',       // ✅ hojas
+    log:  'Texturas/tronco.png'     // ✅ tronco
+  };
+
   let tex = textureMap[type];
+  if(!tex) return; // si no existe textura, no lo añade
+
   // Buscar stack existente
   let slot = inventory.find(s => s && s.type===type);
-  if(slot){ slot.count++; renderHotbar(); return; }
+  if(slot){ 
+    slot.count++; 
+    renderHotbar(); 
+    return; 
+  }
+
   // Buscar primer slot vacío
   let emptyIndex = inventory.findIndex(s=>!s);
-  if(emptyIndex>=0){ inventory[emptyIndex]={type, texture:tex, count:1}; renderHotbar(); }
+  if(emptyIndex>=0){ 
+    inventory[emptyIndex] = {type, texture:tex, count:1}; 
+    renderHotbar(); 
+  }
   else console.log('Inventario lleno');
 }
+
 function placeBlock(wx, wy){
   const slot = inventory[selectedSlot];
   if(!slot) return;
