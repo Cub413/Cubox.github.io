@@ -942,10 +942,10 @@ window.addEventListener("load", () => {
   const nextTrackBtn = document.getElementById("nextTrack");
 
   const tracks413 = [
-    "Texturas/8dark.wav",
+    "Texturas/8Rlx.wav",
     "Texturas/8Epic.wav",
     "Texturas/Alones413.wav",
-    "Texturas/8Rlx.wav"
+    "Texturas/8dark.wav"
   ];
 
   let playlist413 = [];
@@ -1017,6 +1017,9 @@ window.addEventListener("load", () => {
 
   prevTrackBtn.addEventListener("click", pickPrevTrack);
   nextTrackBtn.addEventListener("click", pickNextTrack);
+
+  // --- aquí se reproduce la siguiente automáticamente ---
+  player413.addEventListener("ended", pickNextTrack);
 });
 
 // --- controles de volumen ---
