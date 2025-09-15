@@ -554,27 +554,7 @@ button:active {
   <img src="Texturas/horizontal.png" alt="Gira pantalla">
 </div>
 
-  <!-- Panel inicial -->
-<div id="init-panel" style="
-  position: fixed;
-  top: 0; left: 0;
-  width: 100%; height: 100%;
-  background: rgba(0,0,0,0.8);
-  color: white;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  z-index: 100;
-  font-family: sans-serif;
-">
-  
-  <p style="font-size: 18px; margin-bottom: 20px;">¿Quieres borrar el localStorage de los controles?</p>
-  <div>
-    <button id="init-yes" style="margin-right: 10px; padding: 10px 20px;">Sí</button>
-    <button id="init-no" style="padding: 10px 20px;">No</button>
-  </div>
-</div>
+
 <div id="pause-btn">▐▐</div>
 <div id="blur-bg"></div>
 
@@ -608,43 +588,11 @@ button:active {
 </div>
 
       <div id="fps-toggle" class="setting-btn">mostrar fps: no</div>
-      <div id="controls-btn" class="setting-btn">CONTROLS</div>
+     
     </div>
   </div>
 
   <div id="fps-counter"></div>
-<div id="object-controls" style="display:none;">
-  <div id="settings-header">Ajustes de objeto</div>
-  <div id="panel-msg"></div>
-  <div>Objeto seleccionado: <span id="selected-name">Ninguno</span></div>
-
-  <div class="control-row">
-    <label>Pos X:</label>
-    <button id="posx-minus">-</button>
-    <button id="posx-plus">+</button>
-  </div>
-  <div class="control-row">
-    <label>Pos Y:</label>
-    <button id="posy-minus">-</button>
-    <button id="posy-plus">+</button>
-  </div>
-  <div class="control-row">
-    <label>Escala X:</label>
-    <button id="scalex-minus">-</button>
-    <button id="scalex-plus">+</button>
-  </div>
-  <div class="control-row">
-    <label>Escala Y:</label>
-    <button id="scaley-minus">-</button>
-    <button id="scaley-plus">+</button>
-  </div>
-
-  <div class="control-row">
-    <button id="save-btn">Guardar</button>
-    <button id="reset-btn">Restablecer</button>
-    <button id="confirm-btn">Cerrar</button>
-  </div>
-</div>
 
 <canvas id="gameCanvas"></canvas>
 <!-- Hotbar fija en pantalla -->
@@ -788,151 +736,7 @@ setInterval(() => {
   }
 }, 300);
 
-const panel = document.getElementById("object-controls");
-const msgBox = document.getElementById("panel-msg");
 
-document.getElementById("controls-btn").addEventListener("click", () => {
-  panel.style.display = panel.style.display === "none" ? "block" : "none";
-});
-
-function showMessage(text, duration = 1500) {
-  if (!msgBox) return;
-  msgBox.textContent = text;
-  msgBox.style.opacity = "1";
-  setTimeout(() => msgBox.style.opacity = "0", duration);
-}
-
-function initSelected(obj) {
-  if (!panel || panel.style.display === "none") return;
-  if (!obj.id) { 
-    showMessage("Objeto necesita ID único");
-    return; 
-  }
-
-  selectedObject = obj;
-  selectedObject.style.position = "absolute"; // fuerza movible
-  document.getElementById("selected-name").textContent = obj.id;
-
-  if (!factoryStyles.has(obj)) {
-    const style = window.getComputedStyle(obj);
-    factoryStyles.set(obj, {
-      left: style.left || obj.offsetLeft + "px",
-      top: style.top || obj.offsetTop + "px",
-      width: style.width || obj.offsetWidth + "px",
-      height: style.height || obj.offsetHeight + "px"
-    });
-  }
-
-  const key = "object-" + obj.id;
-  const saved = localStorage.getItem(key);
-  if (saved) {
-    const data = JSON.parse(saved);
-    obj.style.left = data.left;
-    obj.style.top = data.top;
-    obj.style.width = data.width;
-    obj.style.height = data.height;
-  }
-}
-
-document.addEventListener("click", e => {
-  if (!panel || panel.style.display === "none") return;
-  if (e.target.closest("#object-controls") || e.target.closest("#controls-btn")) return;
-  
-  const obj = e.target.closest("[id]");
-  if (!obj) return;
-
-  initSelected(obj);
-});
-
-function changeStylePx(prop, delta) {
-  if (!selectedObject) return;
-  let current = parseFloat(selectedObject.style[prop]) || 
-      (prop.includes("width") ? selectedObject.offsetWidth : selectedObject.offsetHeight);
-  selectedObject.style[prop] = (current + delta) + "px";
-}
-
-function holdButtonPx(button, prop, delta) {
-  let frame;
-  const step = () => {
-    changeStylePx(prop, delta);
-    frame = requestAnimationFrame(step);
-  };
-  button.addEventListener("mousedown", e => { e.preventDefault(); step(); });
-  button.addEventListener("touchstart", e => { e.preventDefault(); step(); });
-  ["mouseup","mouseleave","touchend","touchcancel"].forEach(ev => {
-    button.addEventListener(ev, () => cancelAnimationFrame(frame));
-  });
-}
-
-holdButtonPx(document.getElementById("posx-plus"), "left", 2);
-holdButtonPx(document.getElementById("posx-minus"), "left", -2);
-holdButtonPx(document.getElementById("posy-plus"), "top", 2);
-holdButtonPx(document.getElementById("posy-minus"), "top", -2);
-holdButtonPx(document.getElementById("scalex-plus"), "width", 2);
-holdButtonPx(document.getElementById("scalex-minus"), "width", -2);
-holdButtonPx(document.getElementById("scaley-plus"), "height", 2);
-holdButtonPx(document.getElementById("scaley-minus"), "height", -2);
-
-document.getElementById("save-btn").addEventListener("click", () => {
-  if (!selectedObject) return;
-  const key = "object-" + selectedObject.id;
-  const data = {
-    left: selectedObject.style.left,
-    top: selectedObject.style.top,
-    width: selectedObject.style.width,
-    height: selectedObject.style.height
-  };
-  localStorage.setItem(key, JSON.stringify(data));
-  showMessage("Guardado");
-});
-
-document.getElementById("reset-btn").addEventListener("click", () => {
-  if (!selectedObject) return;
-  const original = factoryStyles.get(selectedObject);
-  if (!original) return;
-  selectedObject.style.left = original.left;
-  selectedObject.style.top = original.top;
-  selectedObject.style.width = original.width;
-  selectedObject.style.height = original.height;
-  showMessage("Restablecido");
-});
-
-document.getElementById("confirm-btn").addEventListener("click", () => {
-  panel.style.display = "none";
-});
-
-window.addEventListener("load", () => {
-  document.querySelectorAll("[id]").forEach(el => {
-    const key = "object-" + el.id;
-    const saved = localStorage.getItem(key);
-    if (saved) {
-      const data = JSON.parse(saved);
-      el.style.position = "absolute";
-      el.style.left = data.left;
-      el.style.top = data.top;
-      el.style.width = data.width;
-      el.style.height = data.height;
-    }
-  });
-});
-const initPanel = document.getElementById("init-panel");
-const yesBtn = document.getElementById("init-yes");
-const noBtn = document.getElementById("init-no");
-
-yesBtn.addEventListener("click", () => {
-  localStorage.clear(); // borra todo
-
-  // Mostramos mensaje indicando que cierre la app
-  initPanel.innerHTML = `
-    <p style="font-size: 18px; margin-bottom: 20px;">
-      LocalStorage borrado. Por favor, cierra el juego y vuelve a abrir para iniciar limpio,al volver a ver las opciones de "si" y "no" presiona [no] para no repetir este proceso.
-    </p>
-  `;
-});
-
-noBtn.addEventListener("click", () => {
-  initPanel.style.display = "none"; // solo ocultar panel
-});
 window.addEventListener("load", () => {
   const starmp3 = document.getElementById("starmp3");
   const player413 = document.getElementById("player413");
@@ -942,10 +746,10 @@ window.addEventListener("load", () => {
   const nextTrackBtn = document.getElementById("nextTrack");
 
   const tracks413 = [
-    "Texturas/8Rlx.wav",
-    "Texturas/8Epic.wav",
-    "Texturas/Alones413.wav",
-    "Texturas/8dark.wav"
+    "Texturas/Explorer.webm",
+    "Texturas/far.webm",
+    "Texturas/Home.webm",
+    "Texturas/RLX.webm"
   ];
 
   let playlist413 = [];
@@ -1098,6 +902,11 @@ textures.dirt = new Image(); textures.dirt.src = 'Texturas/tierra.jpg';
 textures.stone = new Image(); textures.stone.src = 'Texturas/piedra.jpg';
 textures.leaf = new Image();  textures.leaf.src = 'Texturas/oja.png';
 textures.log  = new Image();  textures.log.src  = 'Texturas/tronco.png';
+textures.plank = new Image();
+textures.plank.src = 'Texturas/tablon.png';
+
+textures.crafting_table = new Image();
+textures.crafting_table.src = 'Texturas/mesa_de_crafteo.png';
 
 const crackTextures = [];
 for(let i=1;i<=5;i++){
@@ -1233,6 +1042,70 @@ function generateTree(chunkBg, localX, groundY){
     }
   }
 }
+function initAllSlots() {
+  const allSlots = document.querySelectorAll(
+    '#inventory-grid .slot, #hotbar .slot, #hotbar-fixed .slot, #crafting-grid .slot'
+  );
+
+  allSlots.forEach((slot)=>{
+    slot.onclick = ()=>{
+      const index = parseInt(slot.dataset.index);
+const isCraft = slot.dataset.type === "craft";
+
+
+      if(selectedSlot === null) {
+        // primer click → seleccionar
+        selectedSlot = { index, isCraft };
+        slot.classList.add('selected');
+        console.log("Seleccionado:", selectedSlot);
+      } else if(selectedSlot.index === index && selectedSlot.isCraft === isCraft) {
+        // segundo click en el mismo → cancelar
+        slot.classList.remove('selected');
+        selectedSlot = null;
+      } else {
+        // segundo click en otro → mover o intercambiar
+        let fromItem = selectedSlot.isCraft ? craftingGrid[selectedSlot.index] : inventory[selectedSlot.index];
+        let toItem   = isCraft ? craftingGrid[index] : inventory[index];
+
+        console.log("Mover de", selectedSlot, "→", {index, isCraft});
+        console.log("Origen:", fromItem, "Destino:", toItem);
+
+        if(fromItem){
+          if(!toItem) {
+            // mover
+            if(isCraft) craftingGrid[index] = {...fromItem};
+            else inventory[index] = {...fromItem};
+
+            if(selectedSlot.isCraft) craftingGrid[selectedSlot.index] = null;
+            else inventory[selectedSlot.index] = null;
+          } else {
+            // intercambiar
+            if(isCraft){
+              let temp = {...craftingGrid[index]};
+              craftingGrid[index] = {...fromItem};
+              if(selectedSlot.isCraft) craftingGrid[selectedSlot.index] = temp;
+              else inventory[selectedSlot.index] = temp;
+            } else {
+              let temp = {...inventory[index]};
+              inventory[index] = {...fromItem};
+              if(selectedSlot.isCraft) craftingGrid[selectedSlot.index] = temp;
+              else inventory[selectedSlot.index] = temp;
+            }
+          }
+        }
+
+        // limpiar selección
+        document.querySelectorAll('.slot.selected').forEach(s => s.classList.remove('selected'));
+        selectedSlot = null;
+
+        renderHotbar();
+        renderInventoryGrid();
+        renderCrafting();
+        checkRecipes();
+      }
+    };
+  });
+}
 
 function initInventorySelection() {
   const allSlots = document.querySelectorAll('#inventory-grid .slot');
@@ -1282,6 +1155,7 @@ function enableTouchInventory() {
           inventory[toIdx] = inventory[fromIdx];
           inventory[fromIdx] = temp;
           renderHotbar();
+          renderInventoryGrid();
         }
 
         if (fromType === 'craft' && toType === 'craft') {
@@ -1297,6 +1171,7 @@ function enableTouchInventory() {
           craftingGrid[toIdx] = inventory[fromIdx];
           inventory[fromIdx] = null;
           renderHotbar();
+          renderInventoryGrid();
           renderCrafting();
         }
 
@@ -1305,6 +1180,7 @@ function enableTouchInventory() {
           inventory[toIdx] = craftingGrid[fromIdx];
           craftingGrid[fromIdx] = null;
           renderHotbar();
+          renderInventoryGrid();
           renderCrafting();
         }
 
@@ -1376,6 +1252,29 @@ function renderHotbar() {
 
 // inicializar
 initInventorySelection();
+function renderInventoryGrid() {
+  const invSlots = document.querySelectorAll('#inventory-grid .slot');
+  invSlots.forEach((btn, i) => {
+    btn.innerHTML = ''; // limpiar
+    const slotData = inventory[i];
+    if(slotData){
+      const img = document.createElement('img');
+      img.src = slotData.texture;
+      btn.appendChild(img);
+
+      if(slotData.count > 1){
+        const countDiv = document.createElement('div');
+        countDiv.style.position='absolute';
+        countDiv.style.bottom='2px';
+        countDiv.style.right='2px';
+        countDiv.style.color='white';
+        countDiv.style.fontSize='12px';
+        countDiv.textContent = slotData.count;
+        btn.appendChild(countDiv);
+      }
+    }
+  });
+}
 
 function getBlock(wx, wy){
   let chunkX = Math.floor(wx/CHUNK_SIZE);
@@ -1593,18 +1492,78 @@ function movePlayer() {
 
 function initInventorySlots() {
   const allSlots = document.querySelectorAll('#inventory-grid .slot');
+  // preparar índices manualmente
+document.querySelectorAll('#inventory-grid .slot').forEach((s,i)=>{
+  s.dataset.index = i;       // 0–26
+  s.dataset.type = "inv";
+});
+document.querySelectorAll('#hotbar .slot').forEach((s,i)=>{
+  s.dataset.index = i;       // 0–8
+  s.dataset.type = "inv";
+});
+document.querySelectorAll('#hotbar-fixed .slot').forEach((s,i)=>{
+  s.dataset.index = i;       // 0–8
+  s.dataset.type = "inv";
+});
+document.querySelectorAll('#crafting-grid .craft-slot').forEach((s,i)=>{
+  s.dataset.index = i;       // 0–3
+  s.dataset.type = "craft";
+});
+
   allSlots.forEach((slot, i)=>{
-    slot.dataset.index = i+9; // los 9 primeros slots son hotbar
+    slot.dataset.index = i; // 0–26
+
     slot.onclick = ()=>{
-      if(selectedSlot!==null) renderHotbar(); // quitar anterior selección
-      selectedSlot = parseInt(slot.dataset.index);
-      renderHotbar();
-      console.log('Slot seleccionado:', selectedSlot);
+      const clickedIndex = parseInt(slot.dataset.index);
+
+      if(selectedSlot === null) {
+        // primer click: seleccionar
+        selectedSlot = clickedIndex;
+        slot.classList.add('selected');
+        console.log("Seleccionado slot:", selectedSlot, inventory[selectedSlot]);
+      } else if(selectedSlot === clickedIndex) {
+        // click en el mismo: deseleccionar
+        slot.classList.remove('selected');
+        console.log("Deseleccionado slot:", selectedSlot);
+        selectedSlot = null;
+      } else {
+        // segundo click en otro slot
+        let fromItem = inventory[selectedSlot];
+        let toItem   = inventory[clickedIndex];
+
+        console.log("Mover de", selectedSlot, "→", clickedIndex);
+        console.log("Contenido origen:", fromItem);
+        console.log("Contenido destino:", toItem);
+
+        if(fromItem){ 
+          if(!toItem) {
+            // mover → copiar objeto
+            inventory[clickedIndex] = {...fromItem};
+            inventory[selectedSlot] = null;
+            console.log("Resultado mover:", inventory);
+          } else {
+            // intercambiar → copiar ambos
+            let temp = {...toItem};
+            inventory[clickedIndex] = {...fromItem};
+            inventory[selectedSlot] = temp;
+            console.log("Resultado intercambio:", inventory);
+          }
+        }
+
+        // limpiar selección
+        document.querySelectorAll('.slot.selected').forEach(s => s.classList.remove('selected'));
+        selectedSlot = null;
+
+        renderHotbar();
+        renderInventoryGrid();
+      }
     };
   });
 }
+
 initInventorySlots();
 renderHotbar();
+renderInventoryGrid();
 let craftingGrid = new Array(4).fill(null); // 2x2
 let craftResult = null;
 
@@ -1613,31 +1572,42 @@ function initCraftingSlots(){
   craftSlots.forEach((slot, i)=>{
     slot.dataset.index = i;
     slot.onclick = ()=>{
-      // mover ítem desde inventario al slot de crafteo
+      // usar el item seleccionado del inventario
       if(inventory[selectedSlot]){
-        craftingGrid[i] = {...inventory[selectedSlot]};
-        // quitar del inventario
-        inventory[selectedSlot].count--;
-        if(inventory[selectedSlot].count<=0) inventory[selectedSlot]=null;
-        renderHotbar();
-        renderCrafting();
-        checkRecipes();
+        if(!craftingGrid[i]){ 
+          // copiar solo 1 ítem
+          craftingGrid[i] = {
+            type: inventory[selectedSlot].type,
+            texture: inventory[selectedSlot].texture,
+            count: 1
+          };
+
+          // restar 1 del inventario
+          inventory[selectedSlot].count--;
+          if(inventory[selectedSlot].count <= 0){
+            inventory[selectedSlot] = null;
+          }
+
+          renderHotbar();
+          renderInventoryGrid();
+          renderCrafting();
+          checkRecipes();
+        }
       }
     };
   });
 
   document.getElementById('craft-result').onclick = ()=>{
-    if(craftResult){
-      addItem(craftResult.type);
-      // limpiar crafting grid
-      craftingGrid = new Array(4).fill(null);
-      craftResult = null;
-      renderCrafting();
-      renderHotbar();
-    }
-  };
+  if(craftResult){
+    addItem(craftResult.type, craftResult.count);
+    craftingGrid = new Array(4).fill(null);
+    craftResult = null;
+    renderCrafting();
+    renderHotbar();
+    renderInventoryGrid();
+  }
+};
 }
-
 function renderCrafting(){
   const craftSlots = document.querySelectorAll('.craft-slot');
   craftSlots.forEach((slot, i)=>{
@@ -1659,36 +1629,82 @@ function renderCrafting(){
     resultSlot.appendChild(img);
   }
 }
+if(craftResult){
+  const img = document.createElement('img');
+  img.src = craftResult.texture;
+  resultSlot.appendChild(img);
 
-initCraftingSlots();
+  if(craftResult.count > 1){
+    const countDiv = document.createElement('div');
+    countDiv.style.position = 'absolute';
+    countDiv.style.bottom = '2px';
+    countDiv.style.right = '2px';
+    countDiv.style.color = 'white';
+    countDiv.style.fontSize = '12px';
+    countDiv.textContent = craftResult.count;
+    resultSlot.appendChild(countDiv);
+  }
+}
+
+initAllSlots();
+
+// === RECETAS CON ESCALADO ===
 const recipes = [
   {
     pattern: ['log', null,
               null, null],
-    result: {type:'plank', texture:'Texturas/tablon.png'}
+    result: {type:'plank', texture:'Texturas/tablon.png', baseCount:4, scale:true}
   },
   {
     pattern: ['plank','plank',
               'plank','plank'],
-    result: {type:'crafting_table', texture:'Texturas/mesa_de_crafteo.png'}
+    result: {type:'crafting_table', texture:'Texturas/mesa_de_crafteo.png', baseCount:1, scale:false}
+  },
+  
+  {
+    pattern: [null,'log',
+              null,null],
+    result: {type:'plank', texture:'Texturas/tablon.png', baseCount:4, scale:false}
+  },
+  {
+    pattern: [null,null,
+              'log',null],
+    result: {type:'plank', texture:'Texturas/tablon.png', baseCount:4, scale:false}
+  },
+  {
+    pattern: [null,null,
+              null,'log'],
+    result: {type:'plank', texture:'Texturas/tablon.png', baseCount:4, scale:false}
   }
+  
 ];
 
+
+// === VERIFICAR RECETAS ===
 function checkRecipes(){
   craftResult = null;
 
   for(let recipe of recipes){
     let match = true;
+    let materialCount = 0;
+
     for(let i=0;i<4;i++){
       let need = recipe.pattern[i];
       let has = craftingGrid[i] ? craftingGrid[i].type : null;
+
       if(need !== has){
         match = false;
         break;
       }
+      if(has) materialCount++;
     }
+
     if(match){
-      craftResult = recipe.result;
+      let amount = recipe.result.baseCount;
+      if(recipe.result.scale) {
+        amount = recipe.result.baseCount * materialCount;
+      }
+      craftResult = {...recipe.result, count: amount};
       break;
     }
   }
@@ -1696,8 +1712,63 @@ function checkRecipes(){
   renderCrafting();
 }
 
-// Última dirección presionada (por defecto derecha)
-// Última dirección presionada (por defecto derecha)
+// === MOSTRAR CRAFTEO ===
+function renderCrafting(){
+  const craftSlots = document.querySelectorAll('.craft-slot');
+  craftSlots.forEach((slot, i)=>{
+    slot.innerHTML='';
+    let item = craftingGrid[i];
+    if(item){
+      const img = document.createElement('img');
+      img.src = item.texture;
+      slot.appendChild(img);
+
+      if(item.count > 1){
+        const countDiv = document.createElement('div');
+        countDiv.style.position = 'absolute';
+        countDiv.style.bottom = '2px';
+        countDiv.style.right = '2px';
+        countDiv.style.color = 'white';
+        countDiv.style.fontSize = '12px';
+        countDiv.textContent = item.count;
+        slot.appendChild(countDiv);
+      }
+    }
+  });
+
+  // resultado
+  const resultSlot = document.getElementById('craft-result');
+  resultSlot.innerHTML='';
+  if(craftResult){
+    const img = document.createElement('img');
+    img.src = craftResult.texture;
+    resultSlot.appendChild(img);
+
+    if(craftResult.count > 1){
+      const countDiv = document.createElement('div');
+      countDiv.style.position = 'absolute';
+      countDiv.style.bottom = '2px';
+      countDiv.style.right = '2px';
+      countDiv.style.color = 'white';
+      countDiv.style.fontSize = '12px';
+      countDiv.textContent = craftResult.count;
+      resultSlot.appendChild(countDiv);
+    }
+  }
+}
+
+// === CLICK EN RESULTADO ===
+document.getElementById('craft-result').onclick = ()=>{
+  if(craftResult){
+    addItem(craftResult.type, craftResult.count);
+    craftingGrid = new Array(4).fill(null);
+    craftResult = null;
+    renderCrafting();
+    renderHotbar();
+    renderInventoryGrid();
+  }
+};
+
 let lastDirection = {dx:1, dy:0};
 
 // Variables de estado de los botones
@@ -1775,10 +1846,11 @@ const blockData = {
   'stone': {time:30},
   'dirt': {time:5},
   'grass': {time:5},
-  'log': {time:15},   // tronco → más resistente
-  'leaf': {time:0.5}    // hoja → muy rápido
+  'log': {time:15},
+  'leaf': {time:0.5},
+  'plank': {time:10},          // tablones → intermedio
+  'crafting_table': {time:20}  // mesa de crafteo → más resistente
 };
-
 
 // Romper bloques
 let breaking = {active:false, wx:0, wy:0, progress:0, time:0, type:null, delay:0};
@@ -1858,13 +1930,15 @@ function drawBreaking(){
     if(img.complete) ctx.drawImage(img, breaking.wx*BLOCK_SIZE-cameraX, breaking.wy*BLOCK_SIZE-cameraY, BLOCK_SIZE, BLOCK_SIZE);
   }
 }
-function addItem(type){
+function addItem(type, amount = 1){
   const textureMap = {
     stone: 'Texturas/piedra.jpg',
     dirt: 'Texturas/tierra.jpg',
     grass: 'Texturas/cesped_parte_costado.jpg',
-    leaf: 'Texturas/oja.png',       // ✅ hojas
-    log:  'Texturas/tronco.png'     // ✅ tronco
+    leaf: 'Texturas/oja.png',
+    log:  'Texturas/tronco.png',
+    plank: 'Texturas/tablon.png',
+    crafting_table: 'Texturas/mesa_de_crafteo.png'
   };
 
   let tex = textureMap[type];
@@ -1873,16 +1947,18 @@ function addItem(type){
   // Buscar stack existente
   let slot = inventory.find(s => s && s.type===type);
   if(slot){ 
-    slot.count++; 
+    slot.count += amount; 
     renderHotbar(); 
+    renderInventoryGrid();
     return; 
   }
 
   // Buscar primer slot vacío
   let emptyIndex = inventory.findIndex(s=>!s);
   if(emptyIndex>=0){ 
-    inventory[emptyIndex] = {type, texture:tex, count:1}; 
+    inventory[emptyIndex] = {type, texture:tex, count:amount}; 
     renderHotbar(); 
+    renderInventoryGrid();
   }
   else console.log('Inventario lleno');
 }
@@ -1895,6 +1971,7 @@ function placeBlock(wx, wy){
     slot.count--;
     if(slot.count<=0) inventory[selectedSlot]=null;
     renderHotbar();
+    renderInventoryGrid();
   }
 }
 
@@ -1917,6 +1994,7 @@ function placeBlock(wx, wy){
     slot.count--;
     if(slot.count<=0) inventory[selectedSlot]=null;
     renderHotbar();
+    renderInventoryGrid();
   }
 }
 
