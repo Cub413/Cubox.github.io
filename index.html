@@ -692,6 +692,28 @@ button:active {
 </div>
 
 </div>
+<div id="split-panel" style="
+  position: fixed; 
+  top: 50%; left: 50%; 
+  transform: translate(-50%, -50%);
+  background: rgba(0,0,0,0.85);
+  padding: 10px;
+  border: 2px solid white;
+  border-radius: 6px;
+  color: white;
+  display: none;
+  z-index: 2000;
+  text-align: center;
+  font-family: monospace;">
+  
+  <button id="split-minus">-</button>
+  <span id="split-count">1</span>
+  <button id="split-plus">+</button>
+  <div style="margin-top: 8px;">
+    <button id="split-confirm">✔️</button>
+    <button id="split-cancel">❌</button>
+  </div>
+</div>
 
 <script>
 const canvas = document.getElementById('gameCanvas');
@@ -982,6 +1004,28 @@ invBtn.addEventListener('click', () => {
     invPanel.style.display = 'none';  // cerrar
   }
 });
+// --- Controles de +cantidad- ---
+document.getElementById("split-plus").onclick = ()=>{
+  if (splitFrom !== null) {
+    let max = 0;
+    if (typeof splitFrom === "string" && splitFrom.startsWith("craft:")) {
+      max = craftingGrid[parseInt(splitFrom.split(":")[1])]?.count || 0;
+    } else {
+      max = inventory[splitFrom]?.count || 0;
+    }
+    if (splitAmount < max) {
+      splitAmount++;
+      document.getElementById("split-count").textContent = splitAmount;
+    }
+  }
+};
+
+document.getElementById("split-minus").onclick = ()=>{
+  if (splitAmount > 1) {
+    splitAmount--;
+    document.getElementById("split-count").textContent = splitAmount;
+  }
+};
 
 const pauseBtn = document.getElementById('pause-btn');
 const pauseMenu = document.getElementById('pause-menu');
@@ -1042,70 +1086,82 @@ function generateTree(chunkBg, localX, groundY){
     }
   }
 }
-function initAllSlots() {
-  const allSlots = document.querySelectorAll(
-    '#inventory-grid .slot, #hotbar .slot, #hotbar-fixed .slot, #crafting-grid .slot'
-  );
+let splitFrom = null;
+let splitTo = null;
+let splitAmount = 1;
 
-  allSlots.forEach((slot)=>{
-    slot.onclick = ()=>{
-      const index = parseInt(slot.dataset.index);
-const isCraft = slot.dataset.type === "craft";
-
-
-      if(selectedSlot === null) {
-        // primer click → seleccionar
-        selectedSlot = { index, isCraft };
-        slot.classList.add('selected');
-        console.log("Seleccionado:", selectedSlot);
-      } else if(selectedSlot.index === index && selectedSlot.isCraft === isCraft) {
-        // segundo click en el mismo → cancelar
-        slot.classList.remove('selected');
-        selectedSlot = null;
-      } else {
-        // segundo click en otro → mover o intercambiar
-        let fromItem = selectedSlot.isCraft ? craftingGrid[selectedSlot.index] : inventory[selectedSlot.index];
-        let toItem   = isCraft ? craftingGrid[index] : inventory[index];
-
-        console.log("Mover de", selectedSlot, "→", {index, isCraft});
-        console.log("Origen:", fromItem, "Destino:", toItem);
-
-        if(fromItem){
-          if(!toItem) {
-            // mover
-            if(isCraft) craftingGrid[index] = {...fromItem};
-            else inventory[index] = {...fromItem};
-
-            if(selectedSlot.isCraft) craftingGrid[selectedSlot.index] = null;
-            else inventory[selectedSlot.index] = null;
-          } else {
-            // intercambiar
-            if(isCraft){
-              let temp = {...craftingGrid[index]};
-              craftingGrid[index] = {...fromItem};
-              if(selectedSlot.isCraft) craftingGrid[selectedSlot.index] = temp;
-              else inventory[selectedSlot.index] = temp;
-            } else {
-              let temp = {...inventory[index]};
-              inventory[index] = {...fromItem};
-              if(selectedSlot.isCraft) craftingGrid[selectedSlot.index] = temp;
-              else inventory[selectedSlot.index] = temp;
-            }
-          }
-        }
-
-        // limpiar selección
-        document.querySelectorAll('.slot.selected').forEach(s => s.classList.remove('selected'));
-        selectedSlot = null;
-
-        renderHotbar();
-        renderInventoryGrid();
-        renderCrafting();
-        checkRecipes();
-      }
-    };
-  });
+// abrir panel
+function openSplitPanel(fromIdx, toIdx, max){
+  splitFrom = fromIdx;
+  splitTo = toIdx;
+  splitAmount = Math.ceil(max / 2);
+  document.getElementById("split-count").textContent = splitAmount;
+  document.getElementById("split-panel").style.display = "block";
 }
+
+// confirmar con soporte inv/craft en ambos lados
+document.getElementById("split-confirm").onclick = ()=>{
+  if(splitFrom !== null && splitTo !== null){
+    let fromItem;
+    // detectar origen
+    if(typeof splitFrom === "string" && splitFrom.startsWith("craft:")){
+      fromItem = craftingGrid[parseInt(splitFrom.split(":")[1])];
+    } else {
+      fromItem = inventory[splitFrom];
+    }
+    if(!fromItem) return;
+
+    // crear stack parcial
+    let moved = {
+      type: fromItem.type,
+      texture: fromItem.texture,
+      count: splitAmount
+    };
+
+    // restar del origen
+    fromItem.count -= splitAmount;
+    if(fromItem.count <= 0){
+      if(typeof splitFrom === "string" && splitFrom.startsWith("craft:")){
+        craftingGrid[parseInt(splitFrom.split(":")[1])] = null;
+      } else {
+        inventory[splitFrom] = null;
+      }
+    }
+
+    // destino
+    if(typeof splitTo === "string" && splitTo.startsWith("craft:")){
+      let idx = parseInt(splitTo.split(":")[1]);
+      if(craftingGrid[idx]){
+        craftingGrid[idx].count += moved.count;
+      } else {
+        craftingGrid[idx] = moved;
+      }
+    } else {
+      let toItem = inventory[splitTo];
+      if(toItem){
+        toItem.count += moved.count;
+      } else {
+        inventory[splitTo] = moved;
+      }
+    }
+
+    renderHotbar();
+    checkRecipes();
+    renderInventoryGrid();
+    renderCrafting();
+  }
+  closeSplitPanel();
+};
+function closeSplitPanel(){
+  document.getElementById("split-panel").style.display = "none";
+  splitFrom = null;
+  splitTo = null;
+  splitAmount = 1;
+}
+
+document.getElementById("split-cancel").onclick = ()=>{
+  closeSplitPanel();
+};
 
 function initInventorySelection() {
   const allSlots = document.querySelectorAll('#inventory-grid .slot');
@@ -1119,6 +1175,8 @@ function initInventorySelection() {
 let pickedSlot = null;
 
 function enableTouchInventory() {
+  
+
   const allSlots = document.querySelectorAll(
     '#inventory-grid .slot, #hotbar .slot, #hotbar-fixed .slot, #crafting-grid .slot'
   );
@@ -1491,71 +1549,99 @@ function movePlayer() {
 }
 
 function initInventorySlots() {
-  const allSlots = document.querySelectorAll('#inventory-grid .slot');
   // preparar índices manualmente
-document.querySelectorAll('#inventory-grid .slot').forEach((s,i)=>{
-  s.dataset.index = i;       // 0–26
-  s.dataset.type = "inv";
-});
-document.querySelectorAll('#hotbar .slot').forEach((s,i)=>{
-  s.dataset.index = i;       // 0–8
-  s.dataset.type = "inv";
-});
-document.querySelectorAll('#hotbar-fixed .slot').forEach((s,i)=>{
-  s.dataset.index = i;       // 0–8
-  s.dataset.type = "inv";
-});
-document.querySelectorAll('#crafting-grid .craft-slot').forEach((s,i)=>{
-  s.dataset.index = i;       // 0–3
-  s.dataset.type = "craft";
-});
+  document.querySelectorAll('#inventory-grid .slot').forEach((s,i)=>{
+    s.dataset.index = i;       // 0–26
+    s.dataset.type = "inv";
+  });
+  document.querySelectorAll('#hotbar .slot').forEach((s,i)=>{
+    s.dataset.index = i;       // 0–8
+    s.dataset.type = "inv";
+  });
+  document.querySelectorAll('#hotbar-fixed .slot').forEach((s,i)=>{
+    s.dataset.index = i;       // 0–8
+    s.dataset.type = "inv";
+  });
+  document.querySelectorAll('#crafting-grid .craft-slot').forEach((s,i)=>{
+    s.dataset.index = i;       // 0–3
+    s.dataset.type = "craft";
+  });
 
-  allSlots.forEach((slot, i)=>{
-    slot.dataset.index = i; // 0–26
+  const allSlots = document.querySelectorAll('#inventory-grid .slot, #hotbar .slot, #hotbar-fixed .slot, #crafting-grid .craft-slot');
 
+  allSlots.forEach((slot)=>{
     slot.onclick = ()=>{
       const clickedIndex = parseInt(slot.dataset.index);
+      const clickedType  = slot.dataset.type; // "inv" o "craft"
 
       if(selectedSlot === null) {
         // primer click: seleccionar
-        selectedSlot = clickedIndex;
+        selectedSlot = { index: clickedIndex, type: clickedType };
         slot.classList.add('selected');
-        console.log("Seleccionado slot:", selectedSlot, inventory[selectedSlot]);
-      } else if(selectedSlot === clickedIndex) {
+        console.log("Seleccionado:", selectedSlot);
+      } else if(selectedSlot.index === clickedIndex && selectedSlot.type === clickedType) {
         // click en el mismo: deseleccionar
         slot.classList.remove('selected');
-        console.log("Deseleccionado slot:", selectedSlot);
+        console.log("Deseleccionado:", selectedSlot);
         selectedSlot = null;
       } else {
         // segundo click en otro slot
-        let fromItem = inventory[selectedSlot];
-        let toItem   = inventory[clickedIndex];
+        let fromItem = selectedSlot.type === "inv" ? inventory[selectedSlot.index] : craftingGrid[selectedSlot.index];
+        let toItem   = clickedType === "inv" ? inventory[clickedIndex] : craftingGrid[clickedIndex];
 
-        console.log("Mover de", selectedSlot, "→", clickedIndex);
+        console.log("Mover de", selectedSlot, "→", {index: clickedIndex, type: clickedType});
         console.log("Contenido origen:", fromItem);
         console.log("Contenido destino:", toItem);
 
-        if(fromItem){ 
-          if(!toItem) {
-            // mover → copiar objeto
-            inventory[clickedIndex] = {...fromItem};
-            inventory[selectedSlot] = null;
-            console.log("Resultado mover:", inventory);
-          } else {
-            // intercambiar → copiar ambos
-            let temp = {...toItem};
-            inventory[clickedIndex] = {...fromItem};
-            inventory[selectedSlot] = temp;
-            console.log("Resultado intercambio:", inventory);
-          }
-        }
+        if (fromItem) {
+  if (fromItem.count > 1) {
+    // abrir panel solo si hay más de 1 y el destino es válido
+    if ((selectedSlot.type === "inv" && clickedType === "inv") ||
+        (selectedSlot.type === "inv" && clickedType === "craft")) {
+      openSplitPanel(
+        selectedSlot.index,
+        (clickedType === "craft" ? "craft:" + clickedIndex : clickedIndex),
+        fromItem.count
+      );
+      return; // importante: salir aquí
+    }
+  }
 
+  // 🔹 mover normal también cuando count === 1
+  if (!toItem) {
+    if (clickedType === "inv") inventory[clickedIndex] = { ...fromItem };
+    else craftingGrid[clickedIndex] = { ...fromItem };
+
+    if (selectedSlot.type === "inv") inventory[selectedSlot.index] = null;
+    else craftingGrid[selectedSlot.index] = null;
+
+  } else {
+  // --- Juntar si son del mismo tipo ---
+  if (toItem && toItem.type === fromItem.type) {
+    toItem.count += fromItem.count;
+    if (selectedSlot.type === "inv") inventory[selectedSlot.index] = null;
+    else craftingGrid[selectedSlot.index] = null;
+    console.log("Apilados:", fromItem.type, "→", toItem.count);
+  } else {
+    // intercambio normal
+    let temp = { ...toItem };
+    if (clickedType === "inv") inventory[clickedIndex] = { ...fromItem };
+    else craftingGrid[clickedIndex] = { ...fromItem };
+
+    if (selectedSlot.type === "inv") inventory[selectedSlot.index] = temp;
+    else craftingGrid[selectedSlot.index] = temp;
+    console.log("Intercambio:", fromItem, "<->", toItem);
+  }
+}
+}
         // limpiar selección
         document.querySelectorAll('.slot.selected').forEach(s => s.classList.remove('selected'));
         selectedSlot = null;
 
         renderHotbar();
         renderInventoryGrid();
+        renderCrafting();
+        checkRecipes();
       }
     };
   });
@@ -1572,30 +1658,47 @@ function initCraftingSlots(){
   craftSlots.forEach((slot, i)=>{
     slot.dataset.index = i;
     slot.onclick = ()=>{
-      // usar el item seleccionado del inventario
-      if(inventory[selectedSlot]){
-        if(!craftingGrid[i]){ 
-          // copiar solo 1 ítem
-          craftingGrid[i] = {
-            type: inventory[selectedSlot].type,
-            texture: inventory[selectedSlot].texture,
-            count: 1
-          };
+      if(selectedSlot && selectedSlot.type === "inv"){
+        let invItem = inventory[selectedSlot.index];
+        if(invItem){
+          // si hay más de 1, abrir panel de dividir
+          if(invItem.count > 1){
+            openSplitPanel(selectedSlot.index, "craft:"+i, invItem.count);
+          } else {
+            // mover solo 1 al crafteo
+            craftingGrid[i] = {
+              type: invItem.type,
+              texture: invItem.texture,
+              count: 1
+            };
 
-          // restar 1 del inventario
-          inventory[selectedSlot].count--;
-          if(inventory[selectedSlot].count <= 0){
-            inventory[selectedSlot] = null;
+            // restar del inventario
+            invItem.count--;
+            if(invItem.count <= 0){
+              inventory[selectedSlot.index] = null;
+            }
+
+            renderHotbar();
+            renderInventoryGrid();
+            renderCrafting();
+            checkRecipes();
           }
-
-          renderHotbar();
-          renderInventoryGrid();
-          renderCrafting();
-          checkRecipes();
         }
       }
     };
   });
+
+  document.getElementById('craft-result').onclick = ()=>{
+    if(craftResult){
+      addItem(craftResult.type, craftResult.count);
+      craftingGrid = new Array(4).fill(null);
+      craftResult = null;
+      renderCrafting();
+      renderHotbar();
+      renderInventoryGrid();
+    }
+  };
+
 
   document.getElementById('craft-result').onclick = ()=>{
   if(craftResult){
@@ -1646,7 +1749,7 @@ if(craftResult){
   }
 }
 
-initAllSlots();
+
 
 // === RECETAS CON ESCALADO ===
 const recipes = [
@@ -1690,19 +1793,22 @@ function checkRecipes(){
 
     for(let i=0;i<4;i++){
       let need = recipe.pattern[i];
-      let has = craftingGrid[i] ? craftingGrid[i].type : null;
+      let slot = craftingGrid[i];
+      let has = slot ? slot.type : null;
 
       if(need !== has){
         match = false;
         break;
       }
-      if(has) materialCount++;
+      if(slot) {
+        materialCount += slot.count;  // 🔹 contar la cantidad real
+      }
     }
 
     if(match){
       let amount = recipe.result.baseCount;
       if(recipe.result.scale) {
-        amount = recipe.result.baseCount * materialCount;
+        amount = recipe.result.baseCount * materialCount; // 🔹 escalar bien
       }
       craftResult = {...recipe.result, count: amount};
       break;
