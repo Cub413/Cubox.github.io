@@ -84,8 +84,8 @@ canvas {
   top: 100px;
   left: 50%;
   transform: translateX(-50%);
-  width: 200px;
-  background: #555;
+  width: 250px;
+  background-color: rgba(100,100,100,0.6);
   border: 2px solid #000;
   display: none;
   flex-direction: column;
@@ -95,17 +95,20 @@ canvas {
 }
 
 .menu-btn {
-  background: #888;
-  color: #000;
-  border: 2px solid #000;
-  padding: 6px;
-  margin: 4px 0;
-  width: 100%;
-  text-align: center;
-  cursor: pointer;
-  user-select: none;
-}
+  margin: 5px;
+  font-size: 16px;
+padding: 5px 10px;
+background: #2ecc71;
+color: black;
+border: 4px solid #000;
+cursor: pointer;
+image-rendering: pixelated;
+box-shadow: 4px 4px 0 #000;
+transition: transform 0.1s;
 
+font-family: 'Press Start 2P',
+monospace;
+}
 /* Panel de ajustes deslizable desde la derecha */
 #settings-panel {
   position: fixed;
@@ -113,7 +116,7 @@ canvas {
   right: -240px; /* fuera de la pantalla al inicio */
   width: 220px;
   height: 250px;
-  background: #555;
+  background-color: rgba(100,100,100,0.6);
   border: 2px solid #000;
   display: flex;
   flex-direction: column;
@@ -129,8 +132,8 @@ canvas {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background: #777;
-  border-bottom: 2px solid #000;
+  background-color: rgba(100,100,100,0.6);
+  border-bottom: 1px solid #000000;
   padding: 4px 8px;
   font-family: 'Press Start 2P', monospace;
 }
@@ -148,17 +151,17 @@ canvas {
   display: flex;
   justify-content: center;
   align-items: center;
-  background: #777;
-  border: 2px solid #000;
-  border-radius: 4px;
+  background: #4A00FF59;
+  border: 2px solid #03F2FF;
+  
   padding: 4px 8px;
   margin: 6px 0;
   font-family: 'Press Start 2P', monospace;
 }
 
 #volume-controls button {
-  background: #555;
-  color: #fff;
+  background: #00FFAB;
+  color: #000;
   border: 2px solid #000;
   border-radius: 4px;
   padding: 4px 8px;
@@ -192,10 +195,10 @@ p {
 
 #prevTrack,
 #nextTrack {
-  background-color: #555;
+  background-color: #0029FF;
   color: #fff;
   border: 2px solid #000;
-  border-radius: 6px;
+  
   padding: 6px 12px;
   cursor: pointer;
   font-family: 'Press Start 2P', monospace;
@@ -205,7 +208,7 @@ p {
 
 #prevTrack:hover,
 #nextTrack:hover {
-  background-color: #666;
+  background-color: #13FF00;
 }
 
 #currentTrack {
@@ -221,7 +224,7 @@ p {
 }
 
 .setting-btn {
-  background: #888;
+  background: #09FF003B;
   color: #000;
   border: 2px solid #000;
   padding: 6px;
@@ -395,9 +398,9 @@ button:active {
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  background: rgba(20,20,20,0.95);
+  background: #141414AB;
   padding: 12px;
-  border: 3px solid #555;
+  border: 3px solid #000000;
   border-radius: 8px;
   display: none; /* Se muestra al abrir inventario */
   z-index: 30;
@@ -428,8 +431,8 @@ button:active {
 .slot {
   width: 36px;
   height: 36px;
-  background: #333;
-  border: 2px solid #777;
+  background: #0000005E;
+  border: 2px solid black;
   border-radius: 3px;
   cursor: pointer;
   position: relative;
@@ -444,7 +447,7 @@ button:active {
 }
 
 .slot.selected {
-  border: 2px solid yellow;
+  border: 2px solid #00FF2E;
 }
 
 
@@ -467,7 +470,7 @@ button:active {
 
 .craft-slot {
   background: #444;
-  border: 2px solid #777;
+  border: 2px solid black;
 }
 
 /* Flecha de crafteo */
@@ -479,8 +482,8 @@ button:active {
 
 /* Resultado de crafteo */
 #craft-result {
-  background: #555;
-  border: 2px solid #aaa;
+  background: #42764A;
+  border: 2px solid black;
 }
 
 /* ===== HOTBAR FIJA EN PANTALLA ===== */
@@ -582,9 +585,9 @@ button:active {
 </div>
 <p>musica:</p>
 <div id="music-controls">
-  <button id="prevTrack">⏮️</button>
+  <button id="prevTrack">️<</button>
   <span id="currentTrack">[Nombre de la música]</span>
-  <button id="nextTrack">⏭️</button>
+  <button id="nextTrack">️></button>
 </div>
 
       <div id="fps-toggle" class="setting-btn">mostrar fps: no</div>
@@ -915,7 +918,7 @@ setInterval(() => {
 }, 1000);
 
 const ROWS = 100;
-const CHUNK_SIZE = 20;
+const CHUNK_SIZE = 10;
 
 // Texturas
 const textures = {};
@@ -1477,7 +1480,7 @@ function drawPlayer(dt) {
 }
 
 
-const gravity = 0.8;
+const gravity = 0.9;
 const jumpPower = -15;
 const playerSpeed = 0.12;
 let speed = crouching ? playerSpeed * 0.4 : playerSpeed;
