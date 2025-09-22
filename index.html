@@ -421,10 +421,7 @@ button:active {
 
 /* Hotbar dentro del inventario */
 #hotbar {
-  display: flex;
-  gap: 4px;
-  justify-content: center;
-  margin-top: 8px;
+  display: none;
 }
 
 /* ===== SLOTS ===== */
@@ -543,6 +540,17 @@ button:active {
   50% { opacity: 0.4; }
 }
 
+.slot .count {
+  position: absolute;
+  bottom: 2px;
+  right: 2px;
+  color: white;
+  font-size: 10px;
+  font-family: 'Press Start 2P', monospace;
+  image-rendering: pixelated;
+  text-shadow: 1px 1px 0 #000; /* contorno negro para más contraste */
+  pointer-events: none;
+}
 
 </style>
 </head>
@@ -1284,26 +1292,14 @@ function renderHotbar() {
           img.style.height='100%';
           btn.appendChild(img);
 
-          if(slotData.count>1){
-            if(slotData.count>1){
-  const countDiv = document.createElement('div');
-  countDiv.classList.add('count');
-  countDiv.textContent = slotData.count;
-  btn.appendChild(countDiv);
-}
-
+          if(slotData.count > 1){
             const countDiv = document.createElement('div');
-            countDiv.style.position='absolute';
-            countDiv.style.bottom='2px';
-            countDiv.style.right='2px';
-            countDiv.style.color='white';
-            countDiv.style.fontSize='12px';
+            countDiv.classList.add('count'); // ✅ usa la clase pixelart
             countDiv.textContent = slotData.count;
             btn.appendChild(countDiv);
           }
         }
       }
-      
       btn.classList.toggle('selected', i===selectedSlot);
       btn.dataset.index = i;
       btn.onclick = ()=>{ selectedSlot=i; renderHotbar(); };
@@ -1311,8 +1307,6 @@ function renderHotbar() {
   });
 }
 
-// inicializar
-initInventorySelection();
 function renderInventoryGrid() {
   const invSlots = document.querySelectorAll('#inventory-grid .slot');
   invSlots.forEach((btn, i) => {
@@ -1325,11 +1319,7 @@ function renderInventoryGrid() {
 
       if(slotData.count > 1){
         const countDiv = document.createElement('div');
-        countDiv.style.position='absolute';
-        countDiv.style.bottom='2px';
-        countDiv.style.right='2px';
-        countDiv.style.color='white';
-        countDiv.style.fontSize='12px';
+        countDiv.classList.add('count'); // ✅ igual aquí
         countDiv.textContent = slotData.count;
         btn.appendChild(countDiv);
       }
@@ -1759,30 +1749,30 @@ const recipes = [
   {
     pattern: ['log', null,
               null, null],
-    result: {type:'plank', texture:'Texturas/tablon.png', baseCount:4, scale:true}
+    result: {type:'plank', texture:'Texturas/tablon.png', baseCount:4}
   },
   {
     pattern: ['plank','plank',
               'plank','plank'],
-    result: {type:'crafting_table', texture:'Texturas/mesa_de_crafteo.png', baseCount:1, scale:false}
+    result: {type:'crafting_table', texture:'Texturas/mesa_de_crafteo.png', baseCount:1}
   },
-  
   {
     pattern: [null,'log',
               null,null],
-    result: {type:'plank', texture:'Texturas/tablon.png', baseCount:4, scale:false}
+    result: {type:'plank', texture:'Texturas/tablon.png', baseCount:4}
   },
   {
     pattern: [null,null,
               'log',null],
-    result: {type:'plank', texture:'Texturas/tablon.png', baseCount:4, scale:false}
+    result: {type:'plank', texture:'Texturas/tablon.png', baseCount:4}
   },
   {
     pattern: [null,null,
               null,'log'],
-    result: {type:'plank', texture:'Texturas/tablon.png', baseCount:4, scale:false}
+    result: {type:'plank', texture:'Texturas/tablon.png', baseCount:4}
   }
-  
+
+
 ];
 
 
@@ -1804,22 +1794,23 @@ function checkRecipes(){
         break;
       }
       if(slot) {
-        materialCount += slot.count;  // 🔹 contar la cantidad real
+        materialCount += slot.count;
       }
     }
 
     if(match){
-      let amount = recipe.result.baseCount;
-      if(recipe.result.scale) {
-        amount = recipe.result.baseCount * materialCount; // 🔹 escalar bien
+      const required = recipe.pattern.filter(x=>x!==null).length; // materiales por receta
+      let amount = Math.floor(materialCount / required) * recipe.result.baseCount;
+      if(amount > 0){
+        craftResult = {...recipe.result, count: amount};
       }
-      craftResult = {...recipe.result, count: amount};
       break;
     }
   }
 
   renderCrafting();
 }
+
 
 // === MOSTRAR CRAFTEO ===
 function renderCrafting(){
@@ -2072,18 +2063,7 @@ function addItem(type, amount = 1){
   else console.log('Inventario lleno');
 }
 
-function placeBlock(wx, wy){
-  const slot = inventory[selectedSlot];
-  if(!slot) return;
-  if(getBlock(wx, wy)===null){
-    setBlock(wx, wy, slot.type);
-    slot.count--;
-    if(slot.count<=0) inventory[selectedSlot]=null;
-    renderHotbar();
-    renderInventoryGrid();
-  }
-}
-
+//real//
 // Touch para colocar bloque
 canvas.addEventListener('touchstart', e=>{
   const touch = e.touches[0];
@@ -2095,29 +2075,33 @@ canvas.addEventListener('touchstart', e=>{
   const wy = Math.floor((cy + cameraY)/BLOCK_SIZE);
   placeBlock(wx, wy);
 });
+//check 1//
 function placeBlock(wx, wy){
   const slot = inventory[selectedSlot];
   if(!slot) return;
-  if(getBlock(wx, wy)===null){
-    setBlock(wx, wy, slot.type);
-    slot.count--;
-    if(slot.count<=0) inventory[selectedSlot]=null;
-    renderHotbar();
-    renderInventoryGrid();
+
+  // 1️⃣ Primero capa de fondo
+  if(getBlockBg(wx, wy) === null){
+    setBlockBg(wx, wy, slot.type);
   }
+  // 2️⃣ Si ya hay en fondo, colocar en frente
+  else if(getBlock(wx, wy) === null){
+    setBlock(wx, wy, slot.type);
+  }
+  // 3️⃣ Si ambas ocupadas → nada
+  else {
+    return;
+  }
+
+  // consumir solo 1 bloque
+  slot.count--;
+  if(slot.count <= 0) inventory[selectedSlot] = null;
+
+  renderHotbar();
+  renderInventoryGrid();
 }
 
 // Touch para colocar bloque
-canvas.addEventListener('touchstart', e=>{
-  const touch = e.touches[0];
-  const rect = canvas.getBoundingClientRect();
-  const cx = touch.clientX - rect.left;
-  const cy = touch.clientY - rect.top;
-
-  const wx = Math.floor((cx + cameraX)/BLOCK_SIZE);
-  const wy = Math.floor((cy + cameraY)/BLOCK_SIZE);
-  placeBlock(wx, wy);
-});
 
 // Juego principal
 let lastTime = performance.now();
