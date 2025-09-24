@@ -645,6 +645,22 @@ button:active {
     <button class="slot"></button>
     <button class="slot"></button>
   </div>
+<!-- Crafting 3x3 oculto al inicio -->
+<div id="crafting-section-3x3" style="display:none; gap:10px; margin-top:10px; align-items:center; justify-content:center;">
+  <div id="crafting-grid-3x3" style="display:grid; grid-template-columns:repeat(3,36px); grid-template-rows:repeat(3,36px); gap:4px;">
+    <button class="slot craft-slot-3x3"></button>
+    <button class="slot craft-slot-3x3"></button>
+    <button class="slot craft-slot-3x3"></button>
+    <button class="slot craft-slot-3x3"></button>
+    <button class="slot craft-slot-3x3"></button>
+    <button class="slot craft-slot-3x3"></button>
+    <button class="slot craft-slot-3x3"></button>
+    <button class="slot craft-slot-3x3"></button>
+    <button class="slot craft-slot-3x3"></button>
+  </div>
+  <div class="arrow">➡</div>
+  <button class="slot" id="craft-result-3x3"></button>
+</div>
 
   <!-- Crafting 2x2 -->
   <div id="crafting-section">
@@ -1010,11 +1026,12 @@ const invPanel = document.getElementById('inventory-panel');
 
 invBtn.addEventListener('click', () => {
   if (invPanel.style.display === 'none' || invPanel.style.display === '') {
-    invPanel.style.display = 'block'; // abrir
+    openInventoryNormal(); // siempre abre en modo normal
   } else {
-    invPanel.style.display = 'none';  // cerrar
+    invPanel.style.display = 'none';
   }
 });
+
 // --- Controles de +cantidad- ---
 document.getElementById("split-plus").onclick = ()=>{
   if (splitFrom !== null) {
@@ -1112,57 +1129,162 @@ function openSplitPanel(fromIdx, toIdx, max){
 
 // confirmar con soporte inv/craft en ambos lados
 document.getElementById("split-confirm").onclick = ()=>{
-  if(splitFrom !== null && splitTo !== null){
+  if (splitFrom !== null && splitTo !== null) {
     let fromItem;
-    // detectar origen
-    if(typeof splitFrom === "string" && splitFrom.startsWith("craft:")){
-      fromItem = craftingGrid[parseInt(splitFrom.split(":")[1])];
+
+    // origen
+    if (typeof splitFrom === "string") {
+      if (splitFrom.startsWith("craft:")) {
+        fromItem = craftingGrid[parseInt(splitFrom.split(":")[1])];
+      } else if (splitFrom.startsWith("craft3:")) {
+        fromItem = craftingGrid3x3[parseInt(splitFrom.split(":")[1])];
+      }
     } else {
       fromItem = inventory[splitFrom];
     }
-    if(!fromItem) return;
 
-    // crear stack parcial
+    if (!fromItem) return;
+
+    // crear copia parcial
     let moved = {
       type: fromItem.type,
       texture: fromItem.texture,
       count: splitAmount
     };
 
-    // restar del origen
-    fromItem.count -= splitAmount;
-    if(fromItem.count <= 0){
-      if(typeof splitFrom === "string" && splitFrom.startsWith("craft:")){
-        craftingGrid[parseInt(splitFrom.split(":")[1])] = null;
+    // --- obtener destino ---
+    let toItem;
+    let setDest = (arr, idx, val) => arr[idx] = val;
+
+    if (typeof splitTo === "string") {
+      if (splitTo.startsWith("craft:")) {
+        let idx = parseInt(splitTo.split(":")[1]);
+        toItem = craftingGrid[idx];
+
+        if (!toItem) {
+          // mover
+          setDest(craftingGrid, idx, moved);
+          fromItem.count -= splitAmount;
+        } else if (toItem.type === moved.type) {
+          // apilar
+          toItem.count += moved.count;
+          fromItem.count -= splitAmount;
+        } else {
+          // intercambio
+          let temp = { ...toItem };
+          setDest(craftingGrid, idx, moved);
+          if (typeof splitFrom === "string") {
+            craftingGrid[parseInt(splitFrom.split(":")[1])] = temp;
+          } else {
+            inventory[splitFrom] = temp;
+          }
+        }
+      } else if (splitTo.startsWith("craft3:")) {
+        let idx = parseInt(splitTo.split(":")[1]);
+        toItem = craftingGrid3x3[idx];
+
+        if (!toItem) {
+          setDest(craftingGrid3x3, idx, moved);
+          fromItem.count -= splitAmount;
+        } else if (toItem.type === moved.type) {
+          toItem.count += moved.count;
+          fromItem.count -= splitAmount;
+        } else {
+          let temp = { ...toItem };
+          setDest(craftingGrid3x3, idx, moved);
+          if (typeof splitFrom === "string") {
+            craftingGrid3x3[parseInt(splitFrom.split(":")[1])] = temp;
+          } else {
+            inventory[splitFrom] = temp;
+          }
+        }
+      }
+    } else {
+      // destino inventario
+      toItem = inventory[splitTo];
+      if (!toItem) {
+        inventory[splitTo] = moved;
+        fromItem.count -= splitAmount;
+      } else if (toItem.type === moved.type) {
+        toItem.count += moved.count;
+        fromItem.count -= splitAmount;
+      } else {
+        let temp = { ...toItem };
+        inventory[splitTo] = moved;
+        if (typeof splitFrom === "string") {
+          if (splitFrom.startsWith("craft:")) {
+            craftingGrid[parseInt(splitFrom.split(":")[1])] = temp;
+          } else if (splitFrom.startsWith("craft3:")) {
+            craftingGrid3x3[parseInt(splitFrom.split(":")[1])] = temp;
+          }
+        } else {
+          inventory[splitFrom] = temp;
+        }
+      }
+    }
+
+    // limpiar origen si quedó vacío
+    if (fromItem && fromItem.count <= 0) {
+      if (typeof splitFrom === "string") {
+        if (splitFrom.startsWith("craft:")) {
+          craftingGrid[parseInt(splitFrom.split(":")[1])] = null;
+        } else if (splitFrom.startsWith("craft3:")) {
+          craftingGrid3x3[parseInt(splitFrom.split(":")[1])] = null;
+        }
       } else {
         inventory[splitFrom] = null;
       }
     }
 
-    // destino
-    if(typeof splitTo === "string" && splitTo.startsWith("craft:")){
-      let idx = parseInt(splitTo.split(":")[1]);
-      if(craftingGrid[idx]){
-        craftingGrid[idx].count += moved.count;
-      } else {
-        craftingGrid[idx] = moved;
-      }
-    } else {
-      let toItem = inventory[splitTo];
-      if(toItem){
-        toItem.count += moved.count;
-      } else {
-        inventory[splitTo] = moved;
-      }
-    }
-
     renderHotbar();
-    checkRecipes();
     renderInventoryGrid();
-    renderCrafting();
+    if (usingCrafting3x3) {
+      checkRecipes3x3();
+      renderCrafting3x3();
+    } else {
+      checkRecipes();
+      renderCrafting();
+    }
   }
+
   closeSplitPanel();
 };
+
+function renderCrafting3x3(){
+  const craftSlots = document.querySelectorAll('.craft-slot-3x3');
+  craftSlots.forEach((slot, i)=>{
+    slot.innerHTML='';
+    let item = craftingGrid3x3[i];
+    if(item){
+      const img = document.createElement('img');
+      img.src = item.texture;
+      slot.appendChild(img);
+
+      if(item.count > 1){
+        const countDiv = document.createElement('div');
+        countDiv.classList.add('count');
+        countDiv.textContent = item.count;
+        slot.appendChild(countDiv);
+      }
+    }
+  });
+
+  const resultSlot = document.getElementById('craft-result-3x3');
+  resultSlot.innerHTML='';
+  if(craftResult3x3){
+    const img = document.createElement('img');
+    img.src = craftResult3x3.texture;
+    resultSlot.appendChild(img);
+
+    if(craftResult3x3.count > 1){
+      const countDiv = document.createElement('div');
+      countDiv.classList.add('count');
+      countDiv.textContent = craftResult3x3.count;
+      resultSlot.appendChild(countDiv);
+    }
+  }
+}
+
 function closeSplitPanel(){
   document.getElementById("split-panel").style.display = "none";
   splitFrom = null;
@@ -1186,29 +1308,31 @@ function initInventorySelection() {
 let pickedSlot = null;
 
 function enableTouchInventory() {
-  
-
   const allSlots = document.querySelectorAll(
-    '#inventory-grid .slot, #hotbar .slot, #hotbar-fixed .slot, #crafting-grid .slot'
+    '#inventory-grid .slot, #hotbar .slot, #hotbar-fixed .slot, #crafting-grid .slot, #crafting-grid-3x3 .slot'
   );
 
   allSlots.forEach((slot, i) => {
-    // Detectar si es crafteo o inventario
+    // Detectar el tipo de slot
     if (slot.closest('#crafting-grid')) {
       slot.dataset.type = 'craft';
-      slot.dataset.index = i % 4; // 0–3
+      slot.dataset.index = i % 4; // 0–3 para el 2x2
+    } else if (slot.closest('#crafting-grid-3x3')) {
+      slot.dataset.type = 'craft3';
+      slot.dataset.index = i % 9; // 0–8 para el 3x3
     } else {
       slot.dataset.type = 'inv';
-      // dataset.index ya lo asignan renderHotbar/initInventorySlots
+      slot.dataset.index = i; // inventario o hotbar
     }
 
+    // Eventos de toque/click
     slot.onclick = () => {
       if (!pickedSlot) {
         // Primer toque → seleccionar
         pickedSlot = slot;
         slot.classList.add('selected');
       } else if (pickedSlot === slot) {
-        // Segundo toque en el mismo → cancelar
+        // Segundo toque en el mismo → cancelar selección
         slot.classList.remove('selected');
         pickedSlot = null;
       } else {
@@ -1218,8 +1342,8 @@ function enableTouchInventory() {
         const fromIdx  = parseInt(pickedSlot.dataset.index);
         const toIdx    = parseInt(slot.dataset.index);
 
+        // 🔹 Inventario ↔ Inventario
         if (fromType === 'inv' && toType === 'inv') {
-          // Inventario ↔ Inventario
           let temp = inventory[toIdx];
           inventory[toIdx] = inventory[fromIdx];
           inventory[fromIdx] = temp;
@@ -1227,35 +1351,72 @@ function enableTouchInventory() {
           renderInventoryGrid();
         }
 
-        if (fromType === 'craft' && toType === 'craft') {
-          // Craft ↔ Craft
-          let temp = craftingGrid[toIdx];
-          craftingGrid[toIdx] = craftingGrid[fromIdx];
-          craftingGrid[fromIdx] = temp;
-          renderCrafting();
+        // 🔹 Inventario → Crafting 2x2
+        else if (fromType === 'inv' && toType === 'craft') {
+          if (inventory[fromIdx]) {
+            if (craftingGrid[toIdx]) {
+              craftingGrid[toIdx].count += inventory[fromIdx].count;
+            } else {
+              craftingGrid[toIdx] = inventory[fromIdx];
+            }
+            inventory[fromIdx] = null;
+            renderHotbar();
+            renderInventoryGrid();
+            renderCrafting();
+            checkRecipes();
+          }
         }
 
-        if (fromType === 'inv' && toType === 'craft') {
-          // Inventario → Craft
-          craftingGrid[toIdx] = inventory[fromIdx];
-          inventory[fromIdx] = null;
-          renderHotbar();
-          renderInventoryGrid();
-          renderCrafting();
+        // 🔹 Crafting 2x2 → Inventario
+        else if (fromType === 'craft' && toType === 'inv') {
+          if (craftingGrid[fromIdx]) {
+            if (inventory[toIdx]) {
+              inventory[toIdx].count += craftingGrid[fromIdx].count;
+            } else {
+              inventory[toIdx] = craftingGrid[fromIdx];
+            }
+            craftingGrid[fromIdx] = null;
+            renderHotbar();
+            renderInventoryGrid();
+            renderCrafting();
+            checkRecipes();
+          }
         }
 
-        if (fromType === 'craft' && toType === 'inv') {
-          // Craft → Inventario
-          inventory[toIdx] = craftingGrid[fromIdx];
-          craftingGrid[fromIdx] = null;
-          renderHotbar();
-          renderInventoryGrid();
-          renderCrafting();
+        // 🔹 Inventario → Crafting 3x3
+        else if (fromType === 'inv' && toType === 'craft3') {
+          if (inventory[fromIdx]) {
+            if (craftingGrid3x3[toIdx]) {
+              craftingGrid3x3[toIdx].count += inventory[fromIdx].count;
+            } else {
+              craftingGrid3x3[toIdx] = inventory[fromIdx];
+            }
+            inventory[fromIdx] = null;
+            renderHotbar();
+            renderInventoryGrid();
+            renderCrafting3x3();
+            checkRecipes3x3();
+          }
         }
 
-        // limpiar selección de ambos
+        // 🔹 Crafting 3x3 → Inventario
+        else if (fromType === 'craft3' && toType === 'inv') {
+          if (craftingGrid3x3[fromIdx]) {
+            if (inventory[toIdx]) {
+              inventory[toIdx].count += craftingGrid3x3[fromIdx].count;
+            } else {
+              inventory[toIdx] = craftingGrid3x3[fromIdx];
+            }
+            craftingGrid3x3[fromIdx] = null;
+            renderHotbar();
+            renderInventoryGrid();
+            renderCrafting3x3();
+            checkRecipes3x3();
+          }
+        }
+
+        // limpiar selección
         pickedSlot.classList.remove('selected');
-        slot.classList.remove('selected');
         pickedSlot = null;
       }
     };
@@ -1588,17 +1749,21 @@ function initInventorySlots() {
 
         if (fromItem) {
   if (fromItem.count > 1) {
-    // abrir panel solo si hay más de 1 y el destino es válido
-    if ((selectedSlot.type === "inv" && clickedType === "inv") ||
-        (selectedSlot.type === "inv" && clickedType === "craft")) {
+  // solo abrir split panel si el destino está vacío o es del mismo tipo
+  if (
+    (selectedSlot.type === "inv" && clickedType === "inv") ||
+    (selectedSlot.type === "inv" && clickedType === "craft")
+  ) {
+    if (!toItem || (toItem && toItem.type === fromItem.type)) {
       openSplitPanel(
         selectedSlot.index,
         (clickedType === "craft" ? "craft:" + clickedIndex : clickedIndex),
         fromItem.count
       );
-      return; // importante: salir aquí
+      return; // salir aquí
     }
   }
+}
 
   // 🔹 mover normal también cuando count === 1
   if (!toItem) {
@@ -1610,21 +1775,43 @@ function initInventorySlots() {
 
   } else {
   // --- Juntar si son del mismo tipo ---
-  if (toItem && toItem.type === fromItem.type) {
-    toItem.count += fromItem.count;
-    if (selectedSlot.type === "inv") inventory[selectedSlot.index] = null;
-    else craftingGrid[selectedSlot.index] = null;
-    console.log("Apilados:", fromItem.type, "→", toItem.count);
-  } else {
-    // intercambio normal
-    let temp = { ...toItem };
-    if (clickedType === "inv") inventory[clickedIndex] = { ...fromItem };
-    else craftingGrid[clickedIndex] = { ...fromItem };
+  if (!toItem) {
+  // destino vacío → mover
+  if (clickedType === "inv") inventory[clickedIndex] = { ...fromItem };
+  else craftingGrid[clickedIndex] = { ...fromItem };
 
-    if (selectedSlot.type === "inv") inventory[selectedSlot.index] = temp;
-    else craftingGrid[selectedSlot.index] = temp;
-    console.log("Intercambio:", fromItem, "<->", toItem);
-  }
+  if (selectedSlot.type === "inv") inventory[selectedSlot.index] = null;
+  else craftingGrid[selectedSlot.index] = null;
+}
+
+else if (toItem.type === fromItem.type) {
+  // mismo tipo → apilar
+  toItem.count += fromItem.count;
+  if (selectedSlot.type === "inv") inventory[selectedSlot.index] = null;
+  else craftingGrid[selectedSlot.index] = null;
+  console.log("Apilados:", fromItem.type, "→", toItem.count);
+}
+
+else {
+  // distinto tipo → intercambio
+  // clonar para evitar referencias compartidas
+let temp = { type: toItem.type, texture: toItem.texture, count: toItem.count };
+
+if (clickedType === "inv") {
+  inventory[clickedIndex] = { type: fromItem.type, texture: fromItem.texture, count: fromItem.count };
+} else {
+  craftingGrid[clickedIndex] = { type: fromItem.type, texture: fromItem.texture, count: fromItem.count };
+}
+
+if (selectedSlot.type === "inv") {
+  inventory[selectedSlot.index] = temp;
+} else {
+  craftingGrid[selectedSlot.index] = temp;
+}
+
+  console.log("Intercambio:", fromItem, "<->", toItem);
+}
+
 }
 }
         // limpiar selección
@@ -1641,10 +1828,81 @@ function initInventorySlots() {
 }
 
 initInventorySlots();
+initCraftingSlots3x3(); // ← falta esta llamada
+
 renderHotbar();
 renderInventoryGrid();
-let craftingGrid = new Array(4).fill(null); // 2x2
+let craftingGrid = new Array(4).fill(null);      // 2x2
+let craftingGrid3x3 = new Array(9).fill(null);   // 3x3
 let craftResult = null;
+let craftResult3x3 = null;
+
+let usingCrafting3x3 = false;
+function openCraftingTable() {
+  // mostrar inventario
+  invPanel.style.display = 'block';
+
+  // ocultar el crafteo 2x2
+  document.getElementById('crafting-section').style.display = 'none';
+
+  // mostrar el crafteo 3x3
+  document.getElementById('crafting-section-3x3').style.display = 'flex';
+
+  // marcar que estamos usando el 3x3
+  usingCrafting3x3 = true;
+}
+function openInventoryNormal() {
+  invPanel.style.display = 'block';
+
+  // mostrar 2x2
+  document.getElementById('crafting-section').style.display = 'flex';
+
+  // ocultar 3x3
+  document.getElementById('crafting-section-3x3').style.display = 'none';
+
+  usingCrafting3x3 = false;
+}
+
+function initCraftingSlots3x3(){
+  const craftSlots = document.querySelectorAll('.craft-slot-3x3');
+  craftSlots.forEach((slot, i)=>{
+    slot.dataset.index = i;
+    slot.onclick = ()=>{
+      if(selectedSlot && selectedSlot.type === "inv"){
+        let invItem = inventory[selectedSlot.index];
+        if(invItem){
+          if(invItem.count > 1){
+            openSplitPanel(selectedSlot.index, "craft3:"+i, invItem.count);
+          } else {
+            craftingGrid3x3[i] = {
+              type: invItem.type,
+              texture: invItem.texture,
+              count: 1
+            };
+            invItem.count--;
+            if(invItem.count <= 0) inventory[selectedSlot.index] = null;
+
+            renderHotbar();
+            renderInventoryGrid();
+            renderCrafting3x3();
+            checkRecipes3x3();
+          }
+        }
+      }
+    };
+  });
+
+  document.getElementById('craft-result-3x3').onclick = ()=>{
+    if(craftResult3x3){
+      addItem(craftResult3x3.type, craftResult3x3.count);
+      craftingGrid3x3 = new Array(9).fill(null);
+      craftResult3x3 = null;
+      renderCrafting3x3();
+      renderHotbar();
+      renderInventoryGrid();
+    }
+  };
+}
 
 function initCraftingSlots(){
   const craftSlots = document.querySelectorAll('.craft-slot');
@@ -1743,8 +2001,131 @@ if(craftResult){
 }
 
 
+// === RECETAS DE PLANK EN 3x3 ===
+// === RECETAS DE MESA DE CRAFTEO EN 3x3 ===
+const recipes3x3 = [
+  // --- tus 9 recetas de LOG -> PLANK ---
+  {
+    pattern: [
+      'log', null, null,
+      null,  null, null,
+      null,  null, null
+    ],
+    result: {type:'plank', texture:'Texturas/tablon.png', baseCount:4}
+  },
+  {
+    pattern: [
+      null, 'log', null,
+      null, null, null,
+      null, null, null
+    ],
+    result: {type:'plank', texture:'Texturas/tablon.png', baseCount:4}
+  },
+  {
+    pattern: [
+      null, null, 'log',
+      null, null, null,
+      null, null, null
+    ],
+    result: {type:'plank', texture:'Texturas/tablon.png', baseCount:4}
+  },
+  {
+    pattern: [
+      null, null, null,
+      'log', null, null,
+      null, null, null
+    ],
+    result: {type:'plank', texture:'Texturas/tablon.png', baseCount:4}
+  },
+  {
+    pattern: [
+      null, null, null,
+      null, 'log', null,
+      null, null, null
+    ],
+    result: {type:'plank', texture:'Texturas/tablon.png', baseCount:4}
+  },
+  {
+    pattern: [
+      null, null, null,
+      null, null, 'log',
+      null, null, null
+    ],
+    result: {type:'plank', texture:'Texturas/tablon.png', baseCount:4}
+  },
+  {
+    pattern: [
+      null, null, null,
+      null, null, null,
+      'log', null, null
+    ],
+    result: {type:'plank', texture:'Texturas/tablon.png', baseCount:4}
+  },
+  {
+    pattern: [
+      null, null, null,
+      null, null, null,
+      null, 'log', null
+    ],
+    result: {type:'plank', texture:'Texturas/tablon.png', baseCount:4}
+  },
+  {
+    pattern: [
+      null, null, null,
+      null, null, null,
+      null, null, 'log'
+    ],
+    result: {type:'plank', texture:'Texturas/tablon.png', baseCount:4}
+  },
 
-// === RECETAS CON ESCALADO ===
+  // --- ahora las 5 recetas de PLANK -> MESA DE CRAFTEO ---
+  // esquina superior izquierda
+  {
+    pattern: [
+      'plank','plank', null,
+      'plank','plank', null,
+      null,   null,   null
+    ],
+    result: {type:'crafting_table', texture:'Texturas/mesa_de_crafteo.png', baseCount:1}
+  },
+  // esquina superior derecha
+  {
+    pattern: [
+      null, 'plank','plank',
+      null, 'plank','plank',
+      null, null,   null
+    ],
+    result: {type:'crafting_table', texture:'Texturas/mesa_de_crafteo.png', baseCount:1}
+  },
+  // esquina inferior izquierda
+  {
+    pattern: [
+      null,   null,   null,
+      'plank','plank', null,
+      'plank','plank', null
+    ],
+    result: {type:'crafting_table', texture:'Texturas/mesa_de_crafteo.png', baseCount:1}
+  },
+  // esquina inferior derecha
+  {
+    pattern: [
+      null,   null,   null,
+      null, 'plank','plank',
+      null, 'plank','plank'
+    ],
+    result: {type:'crafting_table', texture:'Texturas/mesa_de_crafteo.png', baseCount:1}
+  },
+  // centro
+  {
+    pattern: [
+      null,   null,   null,
+      null, 'plank','plank',
+      null, 'plank','plank'
+    ],
+    result: {type:'crafting_table', texture:'Texturas/mesa_de_crafteo.png', baseCount:1}
+  }
+];
+
 const recipes = [
   {
     pattern: ['log', null,
@@ -1771,9 +2152,38 @@ const recipes = [
               null,'log'],
     result: {type:'plank', texture:'Texturas/tablon.png', baseCount:4}
   }
-
-
 ];
+
+function checkRecipes3x3(){
+  craftResult3x3 = null;
+
+  for(let recipe of recipes3x3){
+    let match = true;
+    let materialCount = 0;
+
+    for(let i=0;i<9;i++){
+      let need = recipe.pattern[i];
+      let slot = craftingGrid3x3[i];
+      let has = slot ? slot.type : null;
+
+      if(need !== has){
+        match = false;
+        break;
+      }
+      if(slot) materialCount += slot.count;
+    }
+
+    if(match){
+      const required = recipe.pattern.filter(x=>x!==null).length;
+      let amount = Math.floor(materialCount / required) * recipe.result.baseCount;
+      if(amount > 0){
+        craftResult3x3 = {...recipe.result, count: amount};
+      }
+      break;
+    }
+  }
+  renderCrafting3x3();
+}
 
 
 // === VERIFICAR RECETAS ===
@@ -2073,12 +2483,26 @@ canvas.addEventListener('touchstart', e=>{
 
   const wx = Math.floor((cx + cameraX)/BLOCK_SIZE);
   const wy = Math.floor((cy + cameraY)/BLOCK_SIZE);
+
+  // si toca una mesa de crafteo en cualquier capa → abrir crafting
+  if(getBlock(wx, wy)==='crafting_table' || getBlockBg(wx, wy)==='crafting_table'){
+    openCraftingTable();
+    return;
+  }
+
   placeBlock(wx, wy);
 });
+
 //check 1//
 function placeBlock(wx, wy){
   const slot = inventory[selectedSlot];
   if(!slot) return;
+function openCraftingTable() {
+  invPanel.style.display = 'block';
+  document.getElementById('crafting-section').style.display = 'none';     // ocultar 2x2
+  document.getElementById('crafting-section-3x3').style.display = 'flex'; // mostrar 3x3
+  usingCrafting3x3 = true;
+}
 
   // 1️⃣ Primero capa de fondo
   if(getBlockBg(wx, wy) === null){
