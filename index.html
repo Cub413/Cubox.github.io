@@ -502,6 +502,12 @@ button:active {
   height: 34px;
 }
 @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+#split-count {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 14px;
+  color: white;
+  padding: 0 6px;
+}
 
 #overlay413 {
   position: fixed;
@@ -732,11 +738,16 @@ button:active {
   z-index: 2000;
   text-align: center;
   font-family: monospace;">
-  
-  <button id="split-minus">-</button>
-  <span id="split-count">1</span>
-  <button id="split-plus">+</button>
-  <div style="margin-top: 8px;">
+
+  <div style="margin-bottom: 8px;">
+    <button id="split-min">--</button>
+    <button id="split-minus">-</button>
+    <span id="split-count">1</span>
+    <button id="split-plus">+</button>
+    <button id="split-max">++</button>
+  </div>
+
+  <div>
     <button id="split-confirm">✔️</button>
     <button id="split-cancel">❌</button>
   </div>
@@ -1117,22 +1128,46 @@ function generateTree(chunkBg, localX, groundY){
 let splitFrom = null;
 let splitTo = null;
 let splitAmount = 1;
+let splitMax = 1;
 
 // abrir panel
 function openSplitPanel(fromIdx, toIdx, max){
   splitFrom = fromIdx;
   splitTo = toIdx;
   splitAmount = Math.ceil(max / 2);
+  splitMax = max;
   document.getElementById("split-count").textContent = splitAmount;
   document.getElementById("split-panel").style.display = "block";
 }
+
+function closeSplitPanel(){
+  document.getElementById("split-panel").style.display = "none";
+  splitFrom = null;
+  splitTo = null;
+  splitAmount = 1;
+}
+// mínimo (poner en 1)
+document.getElementById("split-min").onclick = ()=>{
+  if (splitFrom !== null) {
+    splitAmount = 1;
+    document.getElementById("split-count").textContent = splitAmount;
+  }
+};
+
+// máximo (poner en splitMax)
+document.getElementById("split-max").onclick = ()=>{
+  if (splitFrom !== null) {
+    splitAmount = splitMax;
+    document.getElementById("split-count").textContent = splitAmount;
+  }
+};
 
 // confirmar con soporte inv/craft en ambos lados
 document.getElementById("split-confirm").onclick = ()=>{
   if (splitFrom !== null && splitTo !== null) {
     let fromItem;
 
-    // origen
+    // obtener origen
     if (typeof splitFrom === "string") {
       if (splitFrom.startsWith("craft:")) {
         fromItem = craftingGrid[parseInt(splitFrom.split(":")[1])];
@@ -1145,92 +1180,65 @@ document.getElementById("split-confirm").onclick = ()=>{
 
     if (!fromItem) return;
 
-    // crear copia parcial
+    // stack a mover
     let moved = {
       type: fromItem.type,
       texture: fromItem.texture,
       count: splitAmount
     };
 
-    // --- obtener destino ---
+    // obtener destino
     let toItem;
-    let setDest = (arr, idx, val) => arr[idx] = val;
-
     if (typeof splitTo === "string") {
       if (splitTo.startsWith("craft:")) {
-        let idx = parseInt(splitTo.split(":")[1]);
-        toItem = craftingGrid[idx];
-
-        if (!toItem) {
-          // mover
-          setDest(craftingGrid, idx, moved);
-          fromItem.count -= splitAmount;
-        } else if (toItem.type === moved.type) {
-          // apilar
-          toItem.count += moved.count;
-          fromItem.count -= splitAmount;
-        } else {
-          // intercambio
-          let temp = { ...toItem };
-          setDest(craftingGrid, idx, moved);
-          if (typeof splitFrom === "string") {
-            craftingGrid[parseInt(splitFrom.split(":")[1])] = temp;
-          } else {
-            inventory[splitFrom] = temp;
-          }
-        }
+        toItem = craftingGrid[parseInt(splitTo.split(":")[1])];
       } else if (splitTo.startsWith("craft3:")) {
-        let idx = parseInt(splitTo.split(":")[1]);
-        toItem = craftingGrid3x3[idx];
-
-        if (!toItem) {
-          setDest(craftingGrid3x3, idx, moved);
-          fromItem.count -= splitAmount;
-        } else if (toItem.type === moved.type) {
-          toItem.count += moved.count;
-          fromItem.count -= splitAmount;
-        } else {
-          let temp = { ...toItem };
-          setDest(craftingGrid3x3, idx, moved);
-          if (typeof splitFrom === "string") {
-            craftingGrid3x3[parseInt(splitFrom.split(":")[1])] = temp;
-          } else {
-            inventory[splitFrom] = temp;
-          }
-        }
+        toItem = craftingGrid3x3[parseInt(splitTo.split(":")[1])];
       }
     } else {
-      // destino inventario
       toItem = inventory[splitTo];
-      if (!toItem) {
-        inventory[splitTo] = moved;
-        fromItem.count -= splitAmount;
-      } else if (toItem.type === moved.type) {
-        toItem.count += moved.count;
-        fromItem.count -= splitAmount;
+    }
+
+    // --- lógica ---
+    if (!toItem) {
+      // mover parcial
+      if (typeof splitTo === "string") {
+        if (splitTo.startsWith("craft:")) craftingGrid[parseInt(splitTo.split(":")[1])] = moved;
+        else craftingGrid3x3[parseInt(splitTo.split(":")[1])] = moved;
       } else {
-        let temp = { ...toItem };
         inventory[splitTo] = moved;
-        if (typeof splitFrom === "string") {
-          if (splitFrom.startsWith("craft:")) {
-            craftingGrid[parseInt(splitFrom.split(":")[1])] = temp;
-          } else if (splitFrom.startsWith("craft3:")) {
-            craftingGrid3x3[parseInt(splitFrom.split(":")[1])] = temp;
-          }
-        } else {
-          inventory[splitFrom] = temp;
-        }
+      }
+      fromItem.count -= splitAmount;
+    }
+    else if (toItem.type === moved.type) {
+      // apilar
+      toItem.count += moved.count;
+      fromItem.count -= splitAmount;
+    }
+    else {
+      // intercambio
+      let temp = { ...toItem };
+
+      if (typeof splitTo === "string") {
+        if (splitTo.startsWith("craft:")) craftingGrid[parseInt(splitTo.split(":")[1])] = moved;
+        else craftingGrid3x3[parseInt(splitTo.split(":")[1])] = moved;
+      } else {
+        inventory[splitTo] = moved;
+      }
+
+      if (typeof splitFrom === "string") {
+        if (splitFrom.startsWith("craft:")) craftingGrid[parseInt(splitFrom.split(":")[1])] = temp;
+        else craftingGrid3x3[parseInt(splitFrom.split(":")[1])] = temp;
+      } else {
+        inventory[splitFrom] = temp;
       }
     }
 
-    // limpiar origen si quedó vacío
-    if (fromItem && fromItem.count <= 0) {
+    // limpiar origen si queda vacío
+    if (fromItem.count <= 0) {
       if (typeof splitFrom === "string") {
-        if (splitFrom.startsWith("craft:")) {
-          craftingGrid[parseInt(splitFrom.split(":")[1])] = null;
-        } else if (splitFrom.startsWith("craft3:")) {
-          craftingGrid3x3[parseInt(splitFrom.split(":")[1])] = null;
-        }
+        if (splitFrom.startsWith("craft:")) craftingGrid[parseInt(splitFrom.split(":")[1])] = null;
+        else craftingGrid3x3[parseInt(splitFrom.split(":")[1])] = null;
       } else {
         inventory[splitFrom] = null;
       }
