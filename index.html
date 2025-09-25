@@ -2309,6 +2309,99 @@ const recipes3x3 = [
     ],
     result: {type:'crafting_table', texture:'Texturas/mesa_de_crafteo.png', baseCount:1}
   },
+  // === NUEVAS RECETAS ===
+
+  {
+    pattern: [
+      'plank', null,  null,
+      'plank', null,  null,
+      null,    null,  null
+    ],
+    result: {type:'stick', texture:'Texturas/palo.png', baseCount:4}
+  },
+// Palos: 2 tablones en vertical → 4 palos
+
+// 🔸 Columna 1
+// Fila 1–2
+{
+  pattern: [
+    'plank', null,  null,
+    'plank', null,  null,
+    null,    null,  null
+  ],
+  result: {type:'stick', texture:'Texturas/palo.png', baseCount:4}
+},
+// Fila 2–3
+{
+  pattern: [
+    null,    null,  null,
+    'plank', null,  null,
+    'plank', null,  null
+  ],
+  result: {type:'stick', texture:'Texturas/palo.png', baseCount:4}
+},
+
+// 🔸 Columna 2
+// Fila 1–2
+{
+  pattern: [
+    null, 'plank', null,
+    null, 'plank', null,
+    null, null,   null
+  ],
+  result: {type:'stick', texture:'Texturas/palo.png', baseCount:4}
+},
+// Fila 2–3
+{
+  pattern: [
+    null, null,   null,
+    null, 'plank', null,
+    null, 'plank', null
+  ],
+  result: {type:'stick', texture:'Texturas/palo.png', baseCount:4}
+},
+
+// 🔸 Columna 3
+// Fila 1–2
+{
+  pattern: [
+    null,  null, 'plank',
+    null,  null, 'plank',
+    null,  null, null
+  ],
+  result: {type:'stick', texture:'Texturas/palo.png', baseCount:4}
+},
+// Fila 2–3
+{
+  pattern: [
+    null, null,  null,
+    null, null, 'plank',
+    null, null, 'plank'
+  ],
+  result: {type:'stick', texture:'Texturas/palo.png', baseCount:4}
+},
+
+  // Pico de madera: 3 tablones arriba + 2 palos en el centro ↓
+  {
+    pattern: [
+      'plank','plank','plank',
+      null,  'stick', null,
+      null,  'stick', null
+    ],
+    result: {type:'wood_pickaxe', texture:'Texturas/pico_madera.png', baseCount:1}
+  },
+
+  // Pico de piedra: 3 piedras arriba + 2 palos en el centro ↓
+  {
+    pattern: [
+      'stone','stone','stone',
+      null,   'stick', null,
+      null,   'stick', null
+    ],
+    result: {type:'stone_pickaxe', texture:'Texturas/pico_piedra.png', baseCount:1}
+  },
+
+
   // centro
   {
     pattern: [
@@ -2330,6 +2423,16 @@ const recipes = [
     pattern: ['plank','plank',
               'plank','plank'],
     result: {type:'crafting_table', texture:'Texturas/mesa_de_crafteo.png', baseCount:1}
+  },
+  {
+    pattern: ['plank',null,
+              'plank',null],
+    result: {type:'stick', texture:'Texturas/palo.png', baseCount:4}
+  },
+  {
+    pattern: [null,'plank',
+              null,'plank'],
+    result: {type:'stick', texture:'Texturas/palo.png', baseCount:4}
   },
   {
     pattern: [null,'log',
@@ -2415,6 +2518,9 @@ function checkRecipes(){
   renderCrafting();
 }
 
+const placeableBlocks = [
+  'stone','dirt','grass','log','plank','crafting_table'
+];
 
 // === MOSTRAR CRAFTEO ===
 function renderCrafting(){
@@ -2645,8 +2751,15 @@ function addItem(type, amount = 1){
     crafting_table: 'Texturas/mesa_de_crafteo.png'
   };
 
-  let tex = textureMap[type];
-  if(!tex) return; // si no existe textura, no lo añade
+  const itemTextures = {
+    stick: 'Texturas/palo.png',
+    wood_pickaxe: 'Texturas/pico_madera.png',
+    stone_pickaxe: 'Texturas/pico_piedra.png'
+  };
+
+  // buscar textura en bloques o en ítems
+  let tex = textureMap[type] || itemTextures[type];
+  if(!tex) return; // si no existe, no lo añade
 
   // Buscar stack existente
   let slot = inventory.find(s => s && s.type===type);
@@ -2688,15 +2801,14 @@ canvas.addEventListener('touchstart', e=>{
 });
 
 //check 1//
+const nonPlaceable = ['stick','wood_pickaxe','stone_pickaxe'];
+
 function placeBlock(wx, wy){
   const slot = inventory[selectedSlot];
   if(!slot) return;
-function openCraftingTable() {
-  invPanel.style.display = 'block';
-  document.getElementById('crafting-section').style.display = 'none';     // ocultar 2x2
-  document.getElementById('crafting-section-3x3').style.display = 'flex'; // mostrar 3x3
-  usingCrafting3x3 = true;
-}
+
+  // 🚫 No permitir colocar objetos no colocables
+  if(nonPlaceable.includes(slot.type)) return;
 
   // 1️⃣ Primero capa de fondo
   if(getBlockBg(wx, wy) === null){
@@ -2711,7 +2823,7 @@ function openCraftingTable() {
     return;
   }
 
-  // consumir solo 1 bloque
+  // ✅ consumir solo 1 bloque
   slot.count--;
   if(slot.count <= 0) inventory[selectedSlot] = null;
 
