@@ -123,6 +123,10 @@ monospace;
   z-index: 1002;
   transition: right 0.3s ease;
 }
+/* ✅ Asegura que también funcione en el 3x3 */
+.craft-slot-3x3.selected {
+  border: 2px solid #00FF2E !important;
+}
 
 #settings-panel.active {
   right: 10px; /* cuando está abierto */
@@ -465,10 +469,11 @@ button:active {
   gap: 4px;
 }
 
-.craft-slot {
+.craft-slot,
+.craft-slot-3x3 {
   background: #444;
-  border: 2px solid black;
 }
+
 
 /* Flecha de crafteo */
 .arrow {
@@ -1388,6 +1393,7 @@ document.getElementById("split-confirm").onclick = ()=>{
     }
 
     renderHotbar();
+    initCraftingSlots3x3Selection();
     renderInventoryGrid();
     if (usingCrafting3x3) {
       checkRecipes3x3();
@@ -1499,6 +1505,7 @@ function enableTouchInventory() {
           inventory[toIdx] = inventory[fromIdx];
           inventory[fromIdx] = temp;
           renderHotbar();
+          initCraftingSlots3x3Selection();
           renderInventoryGrid();
         }
 
@@ -1513,6 +1520,7 @@ function enableTouchInventory() {
             inventory[fromIdx] = null;
             renderHotbar();
             renderInventoryGrid();
+            initCraftingSlots3x3Selection();
             renderCrafting();
             checkRecipes();
           }
@@ -1529,6 +1537,7 @@ function enableTouchInventory() {
             craftingGrid[fromIdx] = null;
             renderHotbar();
             renderInventoryGrid();
+            initCraftingSlots3x3Selection();
             renderCrafting();
             checkRecipes();
           }
@@ -1545,6 +1554,7 @@ function enableTouchInventory() {
             inventory[fromIdx] = null;
             renderHotbar();
             renderInventoryGrid();
+            initCraftingSlots3x3Selection();
             renderCrafting3x3();
             checkRecipes3x3();
           }
@@ -1561,6 +1571,7 @@ function enableTouchInventory() {
             craftingGrid3x3[fromIdx] = null;
             renderHotbar();
             renderInventoryGrid();
+            initCraftingSlots3x3Selection();
             renderCrafting3x3();
             checkRecipes3x3();
           }
@@ -1968,133 +1979,186 @@ let ny = player.y + player.vy;
 }
 
 function initInventorySlots() {
-  // preparar índices manualmente
-  document.querySelectorAll('#inventory-grid .slot').forEach((s,i)=>{
-    s.dataset.index = i;       // 0–26
+  // asignar índices y tipos
+  document.querySelectorAll('#inventory-grid .slot').forEach((s, i) => {
+    s.dataset.index = i;
     s.dataset.type = "inv";
   });
-  document.querySelectorAll('#hotbar .slot').forEach((s,i)=>{
-    s.dataset.index = i;       // 0–8
+  document.querySelectorAll('#hotbar .slot').forEach((s, i) => {
+    s.dataset.index = i;
     s.dataset.type = "inv";
   });
-  document.querySelectorAll('#hotbar-fixed .slot').forEach((s,i)=>{
-    s.dataset.index = i;       // 0–8
+  document.querySelectorAll('#hotbar-fixed .slot').forEach((s, i) => {
+    s.dataset.index = i;
     s.dataset.type = "inv";
   });
-  document.querySelectorAll('#crafting-grid .craft-slot').forEach((s,i)=>{
-    s.dataset.index = i;       // 0–3
+  document.querySelectorAll('#crafting-grid .craft-slot').forEach((s, i) => {
+    s.dataset.index = i;
     s.dataset.type = "craft";
   });
-
-  const allSlots = document.querySelectorAll('#inventory-grid .slot, #hotbar .slot, #hotbar-fixed .slot, #crafting-grid .craft-slot');
-
-  allSlots.forEach((slot)=>{
-    slot.onclick = ()=>{
+  document.querySelectorAll('#crafting-grid-3x3 .craft-slot-3x3').forEach((s, i) => {
+    s.dataset.index = i;
+    s.dataset.type = "craft3";
+  });
+  
+  const allSlots = document.querySelectorAll(
+    '#inventory-grid .slot, #hotbar .slot, #hotbar-fixed .slot, #crafting-grid .craft-slot, #crafting-grid-3x3 .craft-slot-3x3'
+  );
+  
+  allSlots.forEach((slot) => {
+    slot.onclick = () => {
       const clickedIndex = parseInt(slot.dataset.index);
-      const clickedType  = slot.dataset.type; // "inv" o "craft"
-
-      if(selectedSlot === null) {
-        // primer click: seleccionar
+      const clickedType = slot.dataset.type;
+      
+      if (selectedSlot === null) {
+        // primer click → seleccionar
         selectedSlot = { index: clickedIndex, type: clickedType };
         slot.classList.add('selected');
-        console.log("Seleccionado:", selectedSlot);
-      } else if(selectedSlot.index === clickedIndex && selectedSlot.type === clickedType) {
-        // click en el mismo: deseleccionar
+      }
+      else if (selectedSlot.index === clickedIndex && selectedSlot.type === clickedType) {
+        // click en el mismo → cancelar
         slot.classList.remove('selected');
-        console.log("Deseleccionado:", selectedSlot);
         selectedSlot = null;
-      } else {
-        // segundo click en otro slot
-        let fromItem = selectedSlot.type === "inv" ? inventory[selectedSlot.index] : craftingGrid[selectedSlot.index];
-        let toItem   = clickedType === "inv" ? inventory[clickedIndex] : craftingGrid[clickedIndex];
-
-        console.log("Mover de", selectedSlot, "→", {index: clickedIndex, type: clickedType});
-        console.log("Contenido origen:", fromItem);
-        console.log("Contenido destino:", toItem);
-
+      }
+      else {
+        // segundo click
+        let fromItem = getItemFromSlot(selectedSlot);
+        let toItem = getItemFromSlot({ index: clickedIndex, type: clickedType });
+        
         if (fromItem) {
-  if (fromItem.count > 1) {
-  // solo abrir split panel si el destino está vacío o es del mismo tipo
-  if (
-    (selectedSlot.type === "inv" && clickedType === "inv") ||
-    (selectedSlot.type === "inv" && clickedType === "craft")
-  ) {
-    if (!toItem || (toItem && toItem.type === fromItem.type)) {
-      openSplitPanel(
-        selectedSlot.index,
-        (clickedType === "craft" ? "craft:" + clickedIndex : clickedIndex),
-        fromItem.count
-      );
-      return; // salir aquí
-    }
-  }
-}
-
-  // 🔹 mover normal también cuando count === 1
-  if (!toItem) {
-    if (clickedType === "inv") inventory[clickedIndex] = { ...fromItem };
-    else craftingGrid[clickedIndex] = { ...fromItem };
-
-    if (selectedSlot.type === "inv") inventory[selectedSlot.index] = null;
-    else craftingGrid[selectedSlot.index] = null;
-
-  } else {
-  // --- Juntar si son del mismo tipo ---
-  if (!toItem) {
-  // destino vacío → mover
-  if (clickedType === "inv") inventory[clickedIndex] = { ...fromItem };
-  else craftingGrid[clickedIndex] = { ...fromItem };
-
-  if (selectedSlot.type === "inv") inventory[selectedSlot.index] = null;
-  else craftingGrid[selectedSlot.index] = null;
-}
-
-else if (toItem.type === fromItem.type) {
-  // mismo tipo → apilar
-  toItem.count += fromItem.count;
-  if (selectedSlot.type === "inv") inventory[selectedSlot.index] = null;
-  else craftingGrid[selectedSlot.index] = null;
-  console.log("Apilados:", fromItem.type, "→", toItem.count);
-}
-
-else {
-  // distinto tipo → intercambio
-  // clonar para evitar referencias compartidas
-let temp = { type: toItem.type, texture: toItem.texture, count: toItem.count };
-
-if (clickedType === "inv") {
-  inventory[clickedIndex] = { type: fromItem.type, texture: fromItem.texture, count: fromItem.count };
-} else {
-  craftingGrid[clickedIndex] = { type: fromItem.type, texture: fromItem.texture, count: fromItem.count };
-}
-
-if (selectedSlot.type === "inv") {
-  inventory[selectedSlot.index] = temp;
-} else {
-  craftingGrid[selectedSlot.index] = temp;
-}
-
-  console.log("Intercambio:", fromItem, "<->", toItem);
-}
-
-}
-}
+          // --- soporte split-panel ---
+          if (fromItem.count > 1) {
+            let fromKey = (selectedSlot.type === "inv") ?
+              selectedSlot.index :
+              (selectedSlot.type === "craft" ? "craft:" + selectedSlot.index : "craft3:" + selectedSlot.index);
+            
+            let toKey = (clickedType === "inv") ?
+              clickedIndex :
+              (clickedType === "craft" ? "craft:" + clickedIndex : "craft3:" + clickedIndex);
+            
+            if (!toItem || (toItem && toItem.type === fromItem.type)) {
+              openSplitPanel(fromKey, toKey, fromItem.count);
+              return;
+            }
+          }
+          
+          // --- mover/apilar/intercambiar normal ---
+          if (!toItem) {
+            setItemToSlot({ index: clickedIndex, type: clickedType }, { ...fromItem });
+            setItemToSlot(selectedSlot, null);
+          }
+          else if (toItem.type === fromItem.type) {
+            toItem.count += fromItem.count;
+            setItemToSlot(selectedSlot, null);
+          }
+          else {
+            let temp = { ...toItem };
+            setItemToSlot({ index: clickedIndex, type: clickedType }, { ...fromItem });
+            setItemToSlot(selectedSlot, temp);
+          }
+        }
+        
         // limpiar selección
         document.querySelectorAll('.slot.selected').forEach(s => s.classList.remove('selected'));
         selectedSlot = null;
-
+        
         renderHotbar();
+        initCraftingSlots3x3Selection();
         renderInventoryGrid();
-        renderCrafting();
-        checkRecipes();
+
+        // 🔹 refrescar resultado según el modo
+        if (usingCrafting3x3) {
+          checkRecipes3x3();
+          renderCrafting3x3();
+        } else {
+          checkRecipes();
+          renderCrafting();
+        }
       }
     };
   });
 }
 
+function initCraftingSlots3x3Selection() {
+  const slots3x3 = document.querySelectorAll('#crafting-grid-3x3 .craft-slot-3x3');
+
+  slots3x3.forEach((slot, i) => {
+    slot.onclick = () => {
+      if (selectedSlot === null) {
+        // primer click → seleccionar
+        selectedSlot = { index: i, type: "craft3" };
+        slot.classList.add('selected');
+      } 
+      else if (selectedSlot.index === i && selectedSlot.type === "craft3") {
+        // segundo click en el mismo → deseleccionar
+        slot.classList.remove('selected');
+        selectedSlot = null;
+      } 
+      else {
+        // segundo click en otro slot
+        let fromItem = getItemFromSlot(selectedSlot);
+        let toItem   = craftingGrid3x3[i];
+
+        if (fromItem) {
+          // ✅ Soporte SplitPanel
+          if (fromItem.count > 1) {
+            let fromKey = (selectedSlot.type === "inv")
+              ? selectedSlot.index
+              : (selectedSlot.type === "craft" ? "craft:" + selectedSlot.index : "craft3:" + selectedSlot.index);
+
+            let toKey = "craft3:" + i;
+
+            if (!toItem || (toItem && toItem.type === fromItem.type)) {
+              openSplitPanel(fromKey, toKey, fromItem.count);
+              return;
+            }
+          }
+
+          // ✅ Movimiento normal
+          if (!toItem) {
+            craftingGrid3x3[i] = { ...fromItem };
+            setItemToSlot(selectedSlot, null);
+          }
+          else if (toItem.type === fromItem.type) {
+            toItem.count += fromItem.count;
+            setItemToSlot(selectedSlot, null);
+          }
+          else {
+            let temp = { ...toItem };
+            craftingGrid3x3[i] = { ...fromItem };
+            setItemToSlot(selectedSlot, temp);
+          }
+        }
+
+        // limpiar selección
+        document.querySelectorAll('.slot.selected').forEach(s => s.classList.remove('selected'));
+        selectedSlot = null;
+
+        renderCrafting3x3();
+        checkRecipes3x3();
+        renderHotbar();
+        renderInventoryGrid();
+      }
+    };
+  });
+}
+
+function getItemFromSlot(slot){
+  if(slot.type==="inv") return inventory[slot.index];
+  if(slot.type==="craft") return craftingGrid[slot.index];
+  if(slot.type==="craft3") return craftingGrid3x3[slot.index];
+  return null;
+}
+
+function setItemToSlot(slot, item){
+  if(slot.type==="inv") inventory[slot.index] = item;
+  if(slot.type==="craft") craftingGrid[slot.index] = item;
+  if(slot.type==="craft3") craftingGrid3x3[slot.index] = item;
+}
+
 initInventorySlots();
 initCraftingSlots3x3(); // ← falta esta llamada
-
+initCraftingSlots3x3Selection();
 renderHotbar();
 renderInventoryGrid();
 let craftingGrid = new Array(4).fill(null);      // 2x2
@@ -2149,26 +2213,43 @@ function initCraftingSlots3x3(){
 
             renderHotbar();
             renderInventoryGrid();
-            renderCrafting3x3();
-            checkRecipes3x3();
+
+            // 🔹 refrescar resultados
+            if (usingCrafting3x3) {
+              checkRecipes3x3();
+              renderCrafting3x3();
+            } else {
+              checkRecipes();
+              renderCrafting();
+            }
           }
         }
       }
     };
   });
 
-  document.getElementById('craft-result-3x3').onclick = ()=>{
-    if(craftResult3x3){
-      addItem(craftResult3x3.type, craftResult3x3.count);
-      craftingGrid3x3 = new Array(9).fill(null);
-      craftResult3x3 = null;
-      renderCrafting3x3();
-      renderHotbar();
-      renderInventoryGrid();
-    }
-  };
-}
 
+  document.getElementById('craft-result-3x3').onclick = ()=>{
+  if(craftResult3x3){
+    addItem(craftResult3x3.type, craftResult3x3.count);
+
+    for(let i=0; i<craftingGrid3x3.length; i++){
+      if(craftingGrid3x3[i]){
+        craftingGrid3x3[i].count--;
+        if(craftingGrid3x3[i].count <= 0){
+          craftingGrid3x3[i] = null;
+        }
+      }
+    }
+
+    checkRecipes3x3();
+    renderCrafting3x3();
+    renderHotbar();
+    initCraftingSlots3x3Selection();
+    renderInventoryGrid();
+  }
+};
+}
 function initCraftingSlots(){
   const craftSlots = document.querySelectorAll('.craft-slot');
   craftSlots.forEach((slot, i)=>{
@@ -2196,6 +2277,7 @@ function initCraftingSlots(){
 
             renderHotbar();
             renderInventoryGrid();
+            initCraftingSlots3x3Selection();
             renderCrafting();
             checkRecipes();
           }
@@ -2205,28 +2287,30 @@ function initCraftingSlots(){
   });
 
   document.getElementById('craft-result').onclick = ()=>{
-    if(craftResult){
-      addItem(craftResult.type, craftResult.count);
-      craftingGrid = new Array(4).fill(null);
-      craftResult = null;
-      renderCrafting();
-      renderHotbar();
-      renderInventoryGrid();
-    }
-  };
-
-
-  document.getElementById('craft-result').onclick = ()=>{
   if(craftResult){
+    // Añadir resultado al inventario
     addItem(craftResult.type, craftResult.count);
-    craftingGrid = new Array(4).fill(null);
-    craftResult = null;
+
+    // Restar 1 a cada ingrediente usado
+    for(let i=0; i<craftingGrid.length; i++){
+      if(craftingGrid[i]){
+        craftingGrid[i].count--;
+        if(craftingGrid[i].count <= 0){
+          craftingGrid[i] = null;
+        }
+      }
+    }
+
+    // Recalcular receta con lo que queda
+    checkRecipes();
     renderCrafting();
+    initCraftingSlots3x3Selection();
     renderHotbar();
     renderInventoryGrid();
   }
 };
 }
+  
 function renderCrafting(){
   const craftSlots = document.querySelectorAll('.craft-slot');
   craftSlots.forEach((slot, i)=>{
@@ -2542,72 +2626,59 @@ const recipes = [
   }
 ];
 
-function checkRecipes3x3(){
+function checkRecipes3x3() {
+  // 🔹 limpiar siempre el resultado antes de evaluar
   craftResult3x3 = null;
 
-  for(let recipe of recipes3x3){
+  // aquí tu lógica actual que compara con recipes3x3...
+  for (let recipe of recipes3x3) {
     let match = true;
-    let materialCount = 0;
-
-    for(let i=0;i<9;i++){
-      let need = recipe.pattern[i];
+    for (let i = 0; i < 9; i++) {
       let slot = craftingGrid3x3[i];
-      let has = slot ? slot.type : null;
-
-      if(need !== has){
+      let need = recipe.pattern[i];
+      if ((slot && slot.type) !== need) {
         match = false;
         break;
       }
-      if(slot) materialCount += slot.count;
     }
-
-    if(match){
-      const required = recipe.pattern.filter(x=>x!==null).length;
-      let amount = Math.floor(materialCount / required) * recipe.result.baseCount;
-      if(amount > 0){
-        craftResult3x3 = {...recipe.result, count: amount};
-      }
-      break;
+    if (match) {
+      craftResult3x3 = {
+        type: recipe.result.type,
+        texture: recipe.result.texture,
+        count: recipe.result.baseCount
+      };
+      break; // encontramos receta válida → no seguir
     }
   }
+  
   renderCrafting3x3();
 }
 
-
 // === VERIFICAR RECETAS ===
-function checkRecipes(){
+function checkRecipes() {
   craftResult = null;
 
-  for(let recipe of recipes){
+  for (let recipe of recipes) {
     let match = true;
-    let materialCount = 0;
+    for (let i = 0; i < 4; i++) {
+      const needed = recipe.pattern[i];
+      const slot = craftingGrid[i];
 
-    for(let i=0;i<4;i++){
-      let need = recipe.pattern[i];
-      let slot = craftingGrid[i];
-      let has = slot ? slot.type : null;
-
-      if(need !== has){
-        match = false;
-        break;
-      }
-      if(slot) {
-        materialCount += slot.count;
-      }
+      if (needed === null && slot) { match = false; break; }
+      if (needed && (!slot || slot.type !== needed)) { match = false; break; }
     }
 
-    if(match){
-      const required = recipe.pattern.filter(x=>x!==null).length; // materiales por receta
-      let amount = Math.floor(materialCount / required) * recipe.result.baseCount;
-      if(amount > 0){
-        craftResult = {...recipe.result, count: amount};
-      }
+    if (match) {
+      craftResult = {
+        type: recipe.result.type,
+        texture: recipe.result.texture,
+        count: recipe.result.baseCount   // 👈 solo el baseCount
+      };
       break;
     }
   }
-
-  renderCrafting();
 }
+
 
 const placeableBlocks = [
   'stone','dirt','grass','log','plank','crafting_table'
@@ -2661,11 +2732,24 @@ function renderCrafting(){
 // === CLICK EN RESULTADO ===
 document.getElementById('craft-result').onclick = ()=>{
   if(craftResult){
+    // Añadir resultado al inventario
     addItem(craftResult.type, craftResult.count);
-    craftingGrid = new Array(4).fill(null);
-    craftResult = null;
+
+    // Restar 1 a cada ingrediente usado
+    for(let i=0; i<craftingGrid.length; i++){
+      if(craftingGrid[i]){
+        craftingGrid[i].count--;
+        if(craftingGrid[i].count <= 0){
+          craftingGrid[i] = null;
+        }
+      }
+    }
+
+    // Recalcular receta con lo que queda
+    checkRecipes();
     renderCrafting();
     renderHotbar();
+    initCraftingSlots3x3Selection();
     renderInventoryGrid();
   }
 };
@@ -2865,6 +2949,7 @@ function addItem(type, amount = 1){
   if(slot){ 
     slot.count += amount; 
     renderHotbar(); 
+    initCraftingSlots3x3Selection();
     renderInventoryGrid();
     return; 
   }
@@ -2874,6 +2959,7 @@ function addItem(type, amount = 1){
   if(emptyIndex>=0){ 
     inventory[emptyIndex] = {type, texture:tex, count:amount}; 
     renderHotbar(); 
+    initCraftingSlots3x3Selection();
     renderInventoryGrid();
   }
   else console.log('Inventario lleno');
@@ -2932,6 +3018,7 @@ function placeBlock(wx, wy){
 
   renderHotbar();
   renderInventoryGrid();
+  initCraftingSlots3x3Selection();
 }
 
 // Touch para colocar bloque
