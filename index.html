@@ -664,6 +664,9 @@ button:active {
   <button class="q-btn" data-scale="4">Ultra (4K)</button>
 </div>
 <div id="particles-toggle" class="setting-btn">partículas: sí</div>
+<label for="zoomSlider">Zoom:</label>
+<input type="range" id="zoomSlider" min="50" max="150" value="80">
+<span id="zoomValue">80</span>
 
       <div id="fps-toggle" class="setting-btn">mostrar fps: no</div>
      
@@ -831,8 +834,17 @@ ctx.scale(scale, scale);
 let BLOCK_SIZE = 80; // valor inicial
 
 function setZoom(level) {
-  BLOCK_SIZE = level; // ejemplo: setZoom(80) → más cerca
+  BLOCK_SIZE = level;
+  document.getElementById("zoomValue").textContent = level; // mostrar valor actual
+  console.log("BLOCK_SIZE:", BLOCK_SIZE);
+  // Aquí puedes redibujar tu mapa o elementos según el nuevo BLOCK_SIZE
 }
+
+const slider = document.getElementById("zoomSlider");
+slider.addEventListener("input", (e) => {
+  setZoom(parseInt(e.target.value));
+});
+
 let selectedObject = null;
 const factoryStyles = new WeakMap();
 const panel2 = document.getElementById('orientation-panel');
@@ -1567,24 +1579,52 @@ let particles = [];
 
 class Particle {
   constructor(wx, wy, texture, life = 200) {
-    // posiciones en coordenadas de mundo
-    this.wx = wx + 0.5;  // centro horizontal del bloque
-this.wy = wy + 0.5;  // centro vertical del bloque
-                      // un poco debajo del bloque
-    this.vx = (Math.random() - 0.5) * 0.02;      // viento lateral suave
-    this.vy = Math.random() * 0.03 + 0.01;       // caída lenta
+    this.wx = wx + 0.5;  
+    this.wy = wy + 0.5;  
+
+    // velocidad de caída (vertical)
+    this.vy = Math.random() * 0.02 + 0.01;
+
+    // parámetros para el balanceo lateral
+    this.swingAmplitude = 0.3; // qué tanto se mueve de lado a lado (en bloques)
+    this.swingSpeed = 0.05 + Math.random() * 0.05; // velocidad del vaivén
+    this.phase = Math.random() * Math.PI * 2; // desfase inicial
+
     this.life = life;
-    this.size = BLOCK_SIZE * 0.15;               // ahora mucho más pequeñas
+    this.size = BLOCK_SIZE * 0.15;
     this.texture = texture;
     this.alpha = 1;
+    this.time = 0; // contador de frames
   }
 
   update() {
-    this.wx += this.vx;
+    this.time++;
+
+    // Movimiento lateral oscilatorio (seno)
+    this.wx += Math.sin(this.time * this.swingSpeed + this.phase) * 0.02;
+
+    // Caída vertical
     this.wy += this.vy;
+
+    // Vida y transparencia
     this.life--;
     this.alpha = this.life / 200;
   }
+
+  draw(ctx) {
+    if (!this.texture.complete) return;
+
+    const px = this.wx * BLOCK_SIZE - cameraX;
+    const py = this.wy * BLOCK_SIZE - cameraY;
+
+    if (px + this.size < 0 || px > width || py + this.size < 0 || py > height) return;
+
+    ctx.save();
+    ctx.globalAlpha = this.alpha;
+    ctx.drawImage(this.texture, px, py, this.size, this.size);
+    ctx.restore();
+  }
+
 
   draw(ctx) {
     if (!this.texture.complete) return;
@@ -1854,8 +1894,9 @@ function drawPlayer(dt) {
 }
 
 
-const gravity = 0.9;
-const jumpPower = -15;
+const gravity = 0.9 / BLOCK_SIZE;
+const jumpPower = -15 / BLOCK_SIZE;
+
 const playerSpeed = 0.12;
 let speed = crouching ? playerSpeed * 0.4 : playerSpeed;
 
@@ -1903,7 +1944,8 @@ function movePlayer() {
 
   // --- Movimiento vertical ---
   player.vy += gravity;
-  let ny = player.y + player.vy / BLOCK_SIZE;
+let ny = player.y + player.vy;
+
   player.onGround = false;
 
   if(player.vy > 0){ // cayendo
