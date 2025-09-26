@@ -828,7 +828,7 @@ canvas.style.height = height + "px";
 ctx.scale(scale, scale);
 
 
-let BLOCK_SIZE = 100; // valor inicial
+let BLOCK_SIZE = 80; // valor inicial
 
 function setZoom(level) {
   BLOCK_SIZE = level; // ejemplo: setZoom(80) → más cerca
@@ -836,6 +836,35 @@ function setZoom(level) {
 let selectedObject = null;
 const factoryStyles = new WeakMap();
 const panel2 = document.getElementById('orientation-panel');
+// Herramientas
+// Herramientas
+const tools = {
+  wood_pickaxe: {
+    fastBlocks: ['stone','coal'],
+    speed: 0.25
+  },
+  stone_pickaxe: {
+    fastBlocks: ['stone','coal','iron'],
+    speed: 0.15
+  },
+  iron_pickaxe: {
+    fastBlocks: ['stone','coal','iron','gold','diamond'],
+    speed: 0.1
+  },
+
+  // === Hachas ===
+  wood_axe: {
+    fastBlocks: ['log','leaf','plank','crafting_table'], // bloques de madera y hojas
+    speed: 0.25,
+    texture: 'Texturas/hachad_madera.png'
+  },
+  stone_axe: {
+    fastBlocks: ['log','leaf','plank','crafting_table'],
+    speed: 0.15,
+    texture: 'Texturas/hachad_piedra.png'
+  }
+};
+
 
 // Solo mostrar el panel si se carga en vertical
 if(window.innerWidth > window.innerHeight){
@@ -2309,8 +2338,18 @@ const recipes3x3 = [
     ],
     result: {type:'crafting_table', texture:'Texturas/mesa_de_crafteo.png', baseCount:1}
   },
-  // === NUEVAS RECETAS ===
+  // centro
+  {
+    pattern: [
+      null,   null,   null,
+      null, 'plank','plank',
+      null, 'plank','plank'
+    ],
+    result: {type:'crafting_table', texture:'Texturas/mesa_de_crafteo.png', baseCount:1}
+  },
 
+  // --- PALOS ---
+  // columna 1 (fila 1–2)
   {
     pattern: [
       'plank', null,  null,
@@ -2319,69 +2358,53 @@ const recipes3x3 = [
     ],
     result: {type:'stick', texture:'Texturas/palo.png', baseCount:4}
   },
-// Palos: 2 tablones en vertical → 4 palos
+  // columna 1 (fila 2–3)
+  {
+    pattern: [
+      null,    null,  null,
+      'plank', null,  null,
+      'plank', null,  null
+    ],
+    result: {type:'stick', texture:'Texturas/palo.png', baseCount:4}
+  },
+  // columna 2 (fila 1–2)
+  {
+    pattern: [
+      null, 'plank', null,
+      null, 'plank', null,
+      null, null,   null
+    ],
+    result: {type:'stick', texture:'Texturas/palo.png', baseCount:4}
+  },
+  // columna 2 (fila 2–3)
+  {
+    pattern: [
+      null, null,   null,
+      null, 'plank', null,
+      null, 'plank', null
+    ],
+    result: {type:'stick', texture:'Texturas/palo.png', baseCount:4}
+  },
+  // columna 3 (fila 1–2)
+  {
+    pattern: [
+      null,  null, 'plank',
+      null,  null, 'plank',
+      null,  null, null
+    ],
+    result: {type:'stick', texture:'Texturas/palo.png', baseCount:4}
+  },
+  // columna 3 (fila 2–3)
+  {
+    pattern: [
+      null, null,  null,
+      null, null, 'plank',
+      null, null, 'plank'
+    ],
+    result: {type:'stick', texture:'Texturas/palo.png', baseCount:4}
+  },
 
-// 🔸 Columna 1
-// Fila 1–2
-{
-  pattern: [
-    'plank', null,  null,
-    'plank', null,  null,
-    null,    null,  null
-  ],
-  result: {type:'stick', texture:'Texturas/palo.png', baseCount:4}
-},
-// Fila 2–3
-{
-  pattern: [
-    null,    null,  null,
-    'plank', null,  null,
-    'plank', null,  null
-  ],
-  result: {type:'stick', texture:'Texturas/palo.png', baseCount:4}
-},
-
-// 🔸 Columna 2
-// Fila 1–2
-{
-  pattern: [
-    null, 'plank', null,
-    null, 'plank', null,
-    null, null,   null
-  ],
-  result: {type:'stick', texture:'Texturas/palo.png', baseCount:4}
-},
-// Fila 2–3
-{
-  pattern: [
-    null, null,   null,
-    null, 'plank', null,
-    null, 'plank', null
-  ],
-  result: {type:'stick', texture:'Texturas/palo.png', baseCount:4}
-},
-
-// 🔸 Columna 3
-// Fila 1–2
-{
-  pattern: [
-    null,  null, 'plank',
-    null,  null, 'plank',
-    null,  null, null
-  ],
-  result: {type:'stick', texture:'Texturas/palo.png', baseCount:4}
-},
-// Fila 2–3
-{
-  pattern: [
-    null, null,  null,
-    null, null, 'plank',
-    null, null, 'plank'
-  ],
-  result: {type:'stick', texture:'Texturas/palo.png', baseCount:4}
-},
-
-  // Pico de madera: 3 tablones arriba + 2 palos en el centro ↓
+  // --- PICOS ---
   {
     pattern: [
       'plank','plank','plank',
@@ -2390,8 +2413,6 @@ const recipes3x3 = [
     ],
     result: {type:'wood_pickaxe', texture:'Texturas/pico_madera.png', baseCount:1}
   },
-
-  // Pico de piedra: 3 piedras arriba + 2 palos en el centro ↓
   {
     pattern: [
       'stone','stone','stone',
@@ -2401,17 +2422,45 @@ const recipes3x3 = [
     result: {type:'stone_pickaxe', texture:'Texturas/pico_piedra.png', baseCount:1}
   },
 
-
-  // centro
+  // --- HACHAS ---
+  // madera (izquierda)
   {
     pattern: [
-      null,   null,   null,
-      null, 'plank','plank',
-      null, 'plank','plank'
+      'plank','plank', null,
+      'plank','stick', null,
+      null,   'stick', null
     ],
-    result: {type:'crafting_table', texture:'Texturas/mesa_de_crafteo.png', baseCount:1}
+    result: {type:'wood_axe', texture:'Texturas/hachad_madera.png', baseCount:1}
+  },
+  // madera (derecha - espejo)
+  {
+    pattern: [
+      null, 'plank','plank',
+      null, 'stick','plank',
+      null, 'stick', null
+    ],
+    result: {type:'wood_axe', texture:'Texturas/hachad_madera.png', baseCount:1}
+  },
+  // piedra (izquierda)
+  {
+    pattern: [
+      'stone','stone', null,
+      'stone','stick', null,
+      null,   'stick', null
+    ],
+    result: {type:'stone_axe', texture:'Texturas/hachad_piedra.png', baseCount:1}
+  },
+  // piedra (derecha - espejo)
+  {
+    pattern: [
+      null, 'stone','stone',
+      null, 'stick','stone',
+      null, 'stick', null
+    ],
+    result: {type:'stone_axe', texture:'Texturas/hachad_piedra.png', baseCount:1}
   }
 ];
+
 
 const recipes = [
   {
@@ -2706,24 +2755,28 @@ function handleBreaking(dt){
 function updateBreaking(dt){
   if(!breaking.active) return;
 
-  let maxTime = 5;
-  if(blockData[breaking.type]) maxTime = blockData[breaking.type].time;
+  let maxTime = blockData[breaking.type]?.time || 5;
+
+  // Verificar herramienta equipada
+  const slot = inventory[selectedSlot];
+  if(slot && tools[slot.type]){
+    const tool = tools[slot.type];
+    if(tool.fastBlocks.includes(breaking.type)){
+      maxTime *= tool.speed; // aplica la velocidad del pico
+    }
+  }
 
   breaking.time += dt;
   breaking.progress = Math.min(breaking.time/maxTime,1);
 
   if(breaking.progress>=1){
     if(breakMode){
-      // rompe capa 1
       setBlock(breaking.wx, breaking.wy, null);
       addItem(breaking.type);
-    } 
-    else if(breakBgMode){
-      // rompe capa 2
+    } else if(breakBgMode){
       setBlockBg(breaking.wx, breaking.wy, null);
-      addItem(breaking.type);   // ✅ ahora sí agrega al inventario
+      addItem(breaking.type);
     }
-
     stopBreaking();
   }
 }
@@ -2752,10 +2805,14 @@ function addItem(type, amount = 1){
   };
 
   const itemTextures = {
-    stick: 'Texturas/palo.png',
-    wood_pickaxe: 'Texturas/pico_madera.png',
-    stone_pickaxe: 'Texturas/pico_piedra.png'
-  };
+  stick: 'Texturas/palo.png',
+  wood_pickaxe: 'Texturas/pico_madera.png',
+  stone_pickaxe: 'Texturas/pico_piedra.png',
+
+  // --- Hachas ---
+  wood_axe: 'Texturas/hachad_madera.png',
+  stone_axe: 'Texturas/hachad_piedra.png'
+};
 
   // buscar textura en bloques o en ítems
   let tex = textureMap[type] || itemTextures[type];
@@ -2801,7 +2858,11 @@ canvas.addEventListener('touchstart', e=>{
 });
 
 //check 1//
-const nonPlaceable = ['stick','wood_pickaxe','stone_pickaxe'];
+const nonPlaceable = [
+  'stick',
+  'wood_pickaxe', 'stone_pickaxe',
+  'wood_axe', 'stone_axe'
+];
 
 function placeBlock(wx, wy){
   const slot = inventory[selectedSlot];
