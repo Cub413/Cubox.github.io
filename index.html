@@ -1673,6 +1673,21 @@ function updateParticles(ctx) {
 }
 
 const buttons = ['left', 'right', 'jump', 'down', 'inventory-btn'];
+// Romper
+const breakFrames = [];
+for (let i = 1; i <= 2; i++) {
+  const img = new Image();
+  img.src = `Texturas/Cubs_rompiendo${i}.png`;
+  breakFrames.push(img);
+}
+
+// Salto
+const jumpFrames = [];
+{
+  const img = new Image();
+  img.src = `Texturas/Cubs_salto.png`;
+  jumpFrames.push(img);
+}
 
 buttons.forEach(id => {
   const btn = document.getElementById(id);
@@ -1872,38 +1887,50 @@ let player = {
 
 // === Dibujar jugador con animación ===
 function drawPlayer(dt) {
-  const frames = crouching ? crouchFrames : playerFrames;
+  let frames;
 
-  // actualizar frame solo si se mueve y no solo por estar agachado
-  if ((leftPressed || rightPressed)) {
+  if (breaking.active) {
+    frames = breakFrames; // 2 frames
+  } else if (!player.onGround && jumpPressed) {
+    frames = jumpFrames;  // 1 frame
+  } else if (crouching) {
+    frames = crouchFrames; // 4 frames
+  } else {
+    frames = playerFrames; // 4 frames
+  }
+
+  // Seguridad: si frames está vacío, salir
+  if (!frames || frames.length === 0) return;
+
+  // Avanzar frames solo si hay más de 1
+  if (frames.length > 1 && (leftPressed || rightPressed || breaking.active)) {
     frameTimer += dt;
-    if (frameTimer >= 0.2) { // 5 fps
+    if (frameTimer >= 0.2) {
       frameTimer = 0;
       currentFrame = (currentFrame + 1) % frames.length;
     }
   } else {
-    currentFrame = 0; // si no se mueve, siempre frame inicial
+    currentFrame = 0;
   }
 
   const img = frames[currentFrame];
-  if (!img.complete) return;
+  if (!img || !img.complete) return;
 
-  const px = player.x*BLOCK_SIZE - cameraX;
-  const py = player.y*BLOCK_SIZE - cameraY;
-  const pw = player.width*BLOCK_SIZE;
-  const ph = player.height*BLOCK_SIZE;
+  const px = player.x * BLOCK_SIZE - cameraX;
+  const py = player.y * BLOCK_SIZE - cameraY;
+  const pw = player.width * BLOCK_SIZE;
+  const ph = player.height * BLOCK_SIZE;
 
   ctx.save();
   if (player.facing === 1) {
     ctx.translate(px + pw, 0);
-    ctx.scale(-1, 1);
+    ctx.scale(-1, 1);         // 🔄 voltea la textura original
     ctx.drawImage(img, 0, py, pw, ph);
   } else {
     ctx.drawImage(img, px, py, pw, ph);
   }
   ctx.restore();
 }
-
 
 const gravity = 0.9 / BLOCK_SIZE;
 const jumpPower = -15 / BLOCK_SIZE;
@@ -1920,18 +1947,19 @@ function movePlayer() {
   collidingLeft=false; collidingRight=false; collidingTop=false; collidingBottom=false;
 
   // --- Lógica de soporte al agacharse ---
-  if(crouching && player.vx !== 0) {
-    let ny = player.y + player.height + 0.01;
-    let underCenter = isBlock(player.x + player.width/2, ny);
+  // --- Lógica de soporte al agacharse ---
+if (crouching && player.vx !== 0 && player.onGround) {
+  let ny = player.y + player.height + 0.01;
+  let underCenter = isBlock(player.x + player.width/2, ny);
 
-    if(player.vx < 0) { // izquierda
-      let underLeft = isBlock(player.x, ny);
-      if(!underLeft && !underCenter) player.vx = 0;
-    } else if(player.vx > 0) { // derecha
-      let underRight = isBlock(player.x + player.width, ny);
-      if(!underRight && !underCenter) player.vx = 0;
-    }
+  if (player.vx < 0) { // izquierda
+    let underLeft = isBlock(player.x, ny);
+    if (!underLeft && !underCenter) player.vx = 0;
+  } else if (player.vx > 0) { // derecha
+    let underRight = isBlock(player.x + player.width, ny);
+    if (!underRight && !underCenter) player.vx = 0;
   }
+}
 
   // --- Movimiento horizontal normal ---
   let nx = player.x + player.vx;
