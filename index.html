@@ -603,6 +603,63 @@ button:active {
 @keyframes blink413 {
   50% { opacity: 0.4; }
 }
+#secret-menu {
+  position: fixed;
+  top: 0;
+  right: -260px; /* oculto inicialmente */
+  width: 240px;
+  height: 100%;
+  background: rgba(20,20,20,0.95);
+  border-left: 3px solid #000;
+  display: flex;
+  flex-direction: column;
+  transition: right 0.3s ease;
+  z-index: 5000;
+  font-family: 'Press Start 2P', monospace;
+}
+
+#secret-menu.active {
+  right: 0; /* se desliza al abrirse */
+}
+
+#secret-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #333;
+  color: #fff;
+  padding: 6px;
+  font-size: 12px;
+}
+
+#secret-header button {
+  background: transparent;
+  border: none;
+  color: #fff;
+  font-size: 18px;
+  cursor: pointer;
+}
+
+#secret-content {
+  flex: 1;
+  overflow-y: auto; /* scroll vertical */
+  padding: 6px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+#secret-content img {
+  width: 48px;
+  height: 48px;
+  border: 2px solid #444;
+  cursor: pointer;
+  image-rendering: pixelated;
+}
+
+#secret-content img:active {
+  border-color: lime;
+}
 
 .slot .count {
   position: absolute;
@@ -679,6 +736,14 @@ button:active {
   </div>
 
   <div id="fps-counter"></div>
+<!-- Menú secreto -->
+<div id="secret-menu">
+  <div id="secret-header">
+    <span>Objetos</span>
+    <button id="secret-close">×</button>
+  </div>
+  <div id="secret-content"></div>
+</div>
 
 <canvas id="gameCanvas"></canvas>
 <!-- Hotbar fija en pantalla -->
@@ -1213,6 +1278,73 @@ document.getElementById("split-minus").onclick = ()=>{
     document.getElementById("split-count").textContent = splitAmount;
   }
 };
+const secretMenu = document.getElementById("secret-menu");
+const secretContent = document.getElementById("secret-content");
+const secretClose = document.getElementById("secret-close");
+const craftArrow = document.querySelector("#crafting-section .arrow");
+
+// abrir al hacer touchmove en la flecha del 2x2
+craftArrow.addEventListener("touchmove", () => {
+  secretMenu.classList.add("active");
+});
+
+// cerrar con la ×
+secretClose.addEventListener("click", () => {
+  secretMenu.classList.remove("active");
+});
+const allItems = [
+  { type: "grass", src: "Texturas/cesped_parte_costado.jpg" },
+  { type: "dirt", src: "Texturas/tierra.jpg" },
+  { type: "stone", src: "Texturas/piedra.jpg" },
+  { type: "log", src: "Texturas/tronco.png" },
+  { type: "leaf", src: "Texturas/oja.png" },
+  { type: "plank", src: "Texturas/tablon.png" },
+  { type: "crafting_table", src: "Texturas/mesa_de_crafteo.png" },
+  { type: "stick", src: "Texturas/palo.png" },
+
+  // Herramientas
+  { type: "wood_axe", src: "Texturas/hachad_madera.png" },
+  { type: "stone_axe", src: "Texturas/hachad_piedra.png" },
+  { type: "wood_pickaxe", src: "Texturas/pico_madera.png" },
+  { type: "stone_pickaxe", src: "Texturas/pico_piedra.png" }
+  
+];
+
+// función para poblar con todos los objetos
+function populateSecretMenu() {
+  secretContent.innerHTML = "";
+  allItems.forEach(item => {
+    const img = document.createElement("img");
+    img.src = item.src;
+    img.title = item.type;
+    img.onclick = () => {
+      addItemToInventory(item.type, item.src);
+    };
+    secretContent.appendChild(img);
+  });
+}
+
+
+// añadir objeto al inventario (1 unidad)
+function addItemToInventory(type, texture) {
+  // 1️⃣ Buscar si ya existe en el inventario
+  let existing = inventory.find(slot => slot && slot.type === type);
+
+  if (existing) {
+    existing.count += 1; // apilar
+  } else {
+    // 2️⃣ Si no existe, buscar slot vacío
+    let idx = inventory.findIndex(slot => slot === null);
+    if (idx === -1) return; // inventario lleno
+    inventory[idx] = { type, texture, count: 1 };
+  }
+
+  renderHotbar();
+  renderInventoryGrid();
+}
+
+// poblar menú al inicio
+populateSecretMenu();
 
 const pauseBtn = document.getElementById('pause-btn');
 const pauseMenu = document.getElementById('pause-menu');
