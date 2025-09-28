@@ -673,6 +673,33 @@ button:active {
   pointer-events: none;
 }
 
+  #characterMenu {
+    display: flex;
+    gap: 20px;
+  }
+  .characterOption {
+    text-align: center;
+  }
+  .characterOption img {
+    display: block;
+    margin-bottom: 5px;
+    border: 2px solid white;
+    border-radius: 4px;
+  }
+  .characterOption button {
+    margin-top: 5px;
+    padding: 4px 8px;
+    background:#555;
+    color:white;
+    border:none;
+    border-radius:4px;
+    cursor:pointer;
+  }
+  .characterOption button:hover {
+    background:#777;
+  }
+
+
 </style>
 </head>
 <body>
@@ -695,7 +722,30 @@ button:active {
 <div id="pause-menu">
   <div class="menu-btn" id="resume-btn">Reanudar</div>
   <div class="menu-btn" id="exit-btn">Salir</div>
+
+  <!-- 1️⃣ Botón para abrir el menú de personajes -->
+  <div class="menu-btn" id="characterBtn">Personaje</div>
+
   <div class="menu-btn" id="settings-btn">Ajustes</div>
+
+  <!-- 2️⃣ Contenedor del menú de selección de personajes (oculto por defecto) -->
+  <div id="characterMenu" style="display:none; position:absolute; top:0px; left:30px; background:#222; padding:10px; border-radius:8px; color:white;">
+    
+    <!-- Opción de personaje Cubs -->
+    <div class="characterOption">
+      <img src="Texturas/Cubs1.png" alt="Cubs" width="80">
+      <p>Cubs</p>
+      <button class="selectCharacter" data-character="Cubs">Seleccionar</button>
+    </div>
+
+    <!-- Opción de personaje Merry -->
+    <div class="characterOption">
+      <img src="Texturas/Merry1.png" alt="Merry" width="80">
+      <p>Merry</p>
+      <button class="selectCharacter" data-character="Merry">Seleccionar</button>
+    </div>
+
+  </div>
 </div>
 
 <div id="settings-panel">
@@ -952,6 +1002,25 @@ const tools = {
     texture: 'Texturas/hachad_piedra.png'
   }
 };
+
+
+  const characterBtn = document.getElementById('characterBtn');
+  const characterMenu = document.getElementById('characterMenu');
+
+  // Mostrar/ocultar menú
+  characterBtn.addEventListener('click', () => {
+    characterMenu.style.display = characterMenu.style.display === 'none' ? 'flex' : 'none';
+  });
+
+  // Selección de personaje
+  document.querySelectorAll('.selectCharacter').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const selected = btn.dataset.character;
+      loadCharacter(selected); // función que ya tienes
+      characterMenu.style.display = 'none'; // ocultar menú
+      console.log('Personaje seleccionado:', selected);
+    });
+  });
 
 
 // Solo mostrar el panel si se carga en vertical
@@ -1825,20 +1894,93 @@ function updateParticles(ctx) {
 
 const buttons = ['left', 'right', 'jump', 'down', 'inventory-btn'];
 // Romper
-const breakFrames = [];
-for (let i = 1; i <= 2; i++) {
-  const img = new Image();
-  img.src = `Texturas/Cubs_rompiendo${i}.png`;
-  breakFrames.push(img);
+// JS
+const characterFiles = {
+  "Cubs": {
+    player: ["Cubs1.png","Cubs2.png","Cubs3.png","Cubs4.png"],
+    jump: ["Cubs_salto.png"],
+    crouch: ["Cub_agachado1.png","Cub_agachado2.png","Cub_agachado3.png","Cub_agachado4.png"],
+    break: ["Cubs_rompiendo1.png","Cubs_rompiendo2.png"]
+  },
+  "Merry": {
+    player: ["Merry1.png","Merry2.png","Merry3.png","Merry4.png"],
+    jump: ["Merry_salto.png"],
+    crouch: ["Merry_agachado1.png","Merry_agachado2.png","Merry_agachado3.png","Merry_agachado4.png"],
+    break: ["Merry_rompiendo1.png","Merry_rompiendo2.png"]
+  }
+};
+
+// Arrays de frames
+let playerFrames = [];
+let jumpFrames = [];
+let crouchFrames = [];
+let breakFrames = [];
+
+// Función para cargar frames con promesas
+function loadFrames(path, start = 1, end = 1) {
+    return new Promise((resolve) => {
+        const frames = [];
+        let loaded = 0;
+        const total = end - start + 1;
+
+        for (let i = start; i <= end; i++) {
+            const img = new Image();
+            img.onload = () => {
+                loaded++;
+                if (loaded === total) resolve(frames);
+            };
+            img.onerror = () => {
+                console.warn(`No se pudo cargar ${start === end ? path : path + i + '.png'}`);
+                loaded++;
+                if (loaded === total) resolve(frames);
+            };
+            img.src = start === end ? path : `${path}${i}.png`;
+            frames.push(img);
+        }
+
+        // Si no hay frames (total=0)
+        if (total === 0) resolve(frames);
+    });
+}
+async function loadArrayFiles(files) {
+    const frames = [];
+    for (let file of files) {
+        const img = new Image();
+        img.name = file; // <-- clave para offsets
+        await new Promise(res => { img.onload = res; img.onerror = res; img.src = `Texturas/${file}`; });
+        frames.push(img);
+    }
+    return frames;
 }
 
-// Salto
-const jumpFrames = [];
-{
-  const img = new Image();
-  img.src = `Texturas/Cubs_salto.png`;
-  jumpFrames.push(img);
+async function loadCharacter(name) {
+  localStorage.setItem("character", name);
+
+  async function loadArray(arr) {
+    const frames = [];
+    for (let src of arr) {
+      const img = new Image();
+      img.name = src; // 🔑 aquí asignamos el nombre
+      await new Promise(res => { img.onload = res; img.onerror = res; img.src = `Texturas/${src}`; });
+      frames.push(img);
+    }
+    return frames;
+  }
+
+  playerFrames = await loadArray(characterFiles[name].player);
+  jumpFrames   = await loadArray(characterFiles[name].jump);
+  crouchFrames = await loadArray(characterFiles[name].crouch);
+  breakFrames  = await loadArray(characterFiles[name].break);
+
+  console.log(`Personaje ${name} cargado`);
 }
+
+// Detectar personaje guardado al iniciar
+const savedCharacter = localStorage.getItem("character") || "Cubs";
+loadCharacter(savedCharacter);
+
+
+// Salto
 
 buttons.forEach(id => {
   const btn = document.getElementById(id);
@@ -2011,18 +2153,6 @@ document.getElementById('right').addEventListener('touchstart', () => {
 });
 
 // === Texturas del jugador ===
-const playerFrames = [];
-for (let i = 1; i <= 4; i++) {
-  const img = new Image();
-  img.src = `Texturas/Cubs${i}.png`;
-  playerFrames.push(img);
-}
-const crouchFrames = [];
-for (let i = 1; i <= 4; i++) {
-  const img = new Image();
-  img.src = `Texturas/Cub_agachado${i}.png`;
-  crouchFrames.push(img);
-}
 
 let crouching = false; // variable que indica si el jugador está agachado
 
@@ -2036,43 +2166,57 @@ let player = {
   facing: 1 // 1 = derecha, -1 = izquierda
 };
 const handOffsets = {
-  "Texturas/Cubs1.png": { x:6, y:70, scale:1, rotation:40, flip:-1 },
-  "Texturas/Cubs2.png": { x:20, y:70, scale:1, rotation:40, flip:-1 },
-  "Texturas/Cubs3.png": { x:8, y:70, scale:1, rotation:40, flip:-1 },
-  "Texturas/Cubs4.png": { x:1, y:60, scale:1, rotation:20, flip:-1 },
-  "Texturas/Cubs_rompiendo1.png": { x:1, y:30, scale:1, rotation:330, flip:-1 },
-  "Texturas/Cubs_rompiendo2.png": { x:9, y:20, scale:1, rotation:300, flip:-1 },
-  "Texturas/Cub_agachado1.png": { x:9, y:80, scale:1, rotation:50, flip:-1 },
-  "Texturas/Cub_agachado2.png": { x:10, y:80, scale:1, rotation:50, flip:-1 },
-  "Texturas/Cub_agachado3.png": { x:5, y:80, scale:1, rotation:50, flip:-1 },
-  "Texturas/Cub_agachado4.png": { x:1, y:80, scale:1, rotation:50, flip:-1 },
-  "Texturas/Cubs_salto.png": { x:15, y:10, scale:1, rotation:320, flip:-1 }
+  "Cubs1.png": { x:6, y:70, scale:1, rotation:40, flip:-1 },
+  "Cubs2.png": { x:20, y:70, scale:1, rotation:40, flip:-1 },
+  "Cubs3.png": { x:8, y:70, scale:1, rotation:40, flip:-1 },
+  "Cubs4.png": { x:1, y:60, scale:1, rotation:20, flip:-1 },
+  "Cubs_rompiendo1.png": { x:1, y:30, scale:1, rotation:330, flip:-1 },
+  "Cubs_rompiendo2.png": { x:9, y:20, scale:1, rotation:300, flip:-1 },
+  "Cub_agachado1.png": { x:9, y:80, scale:1, rotation:50, flip:-1 },
+  "Cub_agachado2.png": { x:10, y:80, scale:1, rotation:50, flip:-1 },
+  "Cub_agachado3.png": { x:5, y:80, scale:1, rotation:50, flip:-1 },
+  "Cub_agachado4.png": { x:1, y:80, scale:1, rotation:50, flip:-1 },
+  "Cubs_salto.png": { x:15, y:10, scale:1, rotation:320, flip:-1 }
 };
-// Escala global de objetos en mano (aplicada siempre)
-const HAND_SCALE = 0.5;
 
-// Correcciones específicas por frame
 const handAdjustments = {
-  // caminando
-  "Texturas/Cubs1.png": { x: 5,  y: -30, scale: 1 },
-  "Texturas/Cubs2.png": { x: 0,  y: -30, scale: 1 },
-  "Texturas/Cubs3.png": { x: 5,  y: -30, scale: 1 },
-  "Texturas/Cubs4.png": { x: +10,  y: -25, scale: 1 },
-
-  // agachado
-  "Texturas/Cub_agachado1.png": { x: +9, y: -30, scale: 1 },
-  "Texturas/Cub_agachado2.png": { x: +9, y: -30, scale: 1 },
-  "Texturas/Cub_agachado3.png": { x: +9, y: -30, scale: 1 },
-  "Texturas/Cub_agachado4.png": { x: +9, y: -30, scale: 1 },
-
-  // quieto (usa Cubs1 como base, pero puedes ponerlo aparte si quieres)
-  // "Texturas/Cubs_idle.png": { x: 0, y: -15, scale: 1 },
-
-  // rompiendo y salto sin cambios
-  "Texturas/Cubs_rompiendo1.png": { x: 0, y: 0, scale: 1 },
-  "Texturas/Cubs_rompiendo2.png": { x: 0, y: 0, scale: 1 },
-  "Texturas/Cubs_salto.png":      { x: 0, y: 0, scale: 1 }
+  "Cubs1.png": { x: 5,  y: -30, scale: 1 },
+  "Cubs2.png": { x: 0,  y: -30, scale: 1 },
+  "Cubs3.png": { x: 5,  y: -30, scale: 1 },
+  "Cubs4.png": { x: 10, y: -25, scale: 1 },
+  "Cub_agachado1.png": { x: 9, y: -30, scale: 1 },
+  "Cub_agachado2.png": { x: 9, y: -30, scale: 1 },
+  "Cub_agachado3.png": { x: 9, y: -30, scale: 1 },
+  "Cub_agachado4.png": { x: 9, y: -30, scale: 1 },
+  "Cubs_rompiendo1.png": { x: 0, y: 0, scale: 1 },
+  "Cubs_rompiendo2.png": { x: 0, y: 0, scale: 1 },
+  "Cubs_salto.png":      { x: 0, y: 0, scale: 1 }
 };
+// Offsets para Merry (idénticos a los de Cubs)
+handOffsets["Merry1.png"] = { x:6, y:70, scale:1, rotation:40, flip:-1 };
+handOffsets["Merry2.png"] = { x:20, y:70, scale:1, rotation:40, flip:-1 };
+handOffsets["Merry3.png"] = { x:8, y:70, scale:1, rotation:40, flip:-1 };
+handOffsets["Merry4.png"] = { x:1, y:60, scale:1, rotation:20, flip:-1 };
+handOffsets["Merry_rompiendo1.png"] = { x:1, y:30, scale:1, rotation:330, flip:-1 };
+handOffsets["Merry_rompiendo2.png"] = { x:9, y:20, scale:1, rotation:300, flip:-1 };
+handOffsets["Merry_agachado1.png"] = { x:9, y:80, scale:1, rotation:50, flip:-1 };
+handOffsets["Merry_agachado2.png"] = { x:10, y:80, scale:1, rotation:50, flip:-1 };
+handOffsets["Merry_agachado3.png"] = { x:5, y:80, scale:1, rotation:50, flip:-1 };
+handOffsets["Merry_agachado4.png"] = { x:1, y:80, scale:1, rotation:50, flip:-1 };
+handOffsets["Merry_salto.png"] = { x:15, y:10, scale:1, rotation:320, flip:-1 };
+
+// Ajustes para Merry
+handAdjustments["Merry1.png"] = { x: 5,  y: -30, scale: 1 };
+handAdjustments["Merry2.png"] = { x: 0,  y: -30, scale: 1 };
+handAdjustments["Merry3.png"] = { x: 5,  y: -30, scale: 1 };
+handAdjustments["Merry4.png"] = { x: 10, y: -25, scale: 1 };
+handAdjustments["Merry_agachado1.png"] = { x: 9, y: -30, scale: 1 };
+handAdjustments["Merry_agachado2.png"] = { x: 9, y: -30, scale: 1 };
+handAdjustments["Merry_agachado3.png"] = { x: 9, y: -30, scale: 1 };
+handAdjustments["Merry_agachado4.png"] = { x: 9, y: -30, scale: 1 };
+handAdjustments["Merry_rompiendo1.png"] = { x: 0, y: 0, scale: 1 };
+handAdjustments["Merry_rompiendo2.png"] = { x: 0, y: 0, scale: 1 };
+handAdjustments["Merry_salto.png"] = { x: 0, y: 0, scale: 1 };
 
 // === Dibujar jugador con animación ===
 function drawPlayer(dt) {
@@ -2120,9 +2264,12 @@ function drawPlayer(dt) {
   ctx.restore();
 
   // === DIBUJAR OBJETO EN MANO ===
-  const frameKey = playerImg.src.split("/").slice(-2).join("/"); 
-  const offset = handOffsets[frameKey];
-  const adjust = handAdjustments[frameKey] || { x: 0, y: 0, scale: 1 };
+const frameKey = playerImg.name;
+const offset = handOffsets[frameKey];
+const HAND_SCALE = 0.5; // 1 = tamaño normal, 0.5 = la mitad, 2 = doble tamaño
+
+const adjust = handAdjustments[frameKey] || { x:0, y:0, scale:1 };
+
 
   const selected = inventory[selectedSlot];
   if (offset && selected && selected.texture) {
