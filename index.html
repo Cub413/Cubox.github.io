@@ -983,9 +983,13 @@ if (savedQuality) {
   const scale = parseFloat(savedQuality);
   resizeCanvas(scale);
 
-  // simular clic en el botón correspondiente
+  // simular clic en el botón correspondiente después de 10 segundos
   const savedBtn = Array.from(qButtons).find(btn => parseFloat(btn.dataset.scale) === scale);
-  if (savedBtn) savedBtn.click();
+  if (savedBtn) {
+    setTimeout(() => {
+      savedBtn.click();
+    }, 10000); // 10000 ms = 10 segundos
+  }
 }
 
 // evento para los botones
@@ -995,7 +999,6 @@ qButtons.forEach(btn => {
     resizeCanvas(scale);
   });
 });
-
 
 let lastOrientation = window.innerWidth > window.innerHeight;
 
