@@ -3149,28 +3149,42 @@ const blockData = {
 // Romper bloques
 let breaking = {active:false, wx:0, wy:0, progress:0, time:0, type:null, delay:0};
 
-function handleBreaking(dt){
-  if((!breakMode && !breakBgMode) || !lastDirection) { stopBreaking(); return; }
+function handleBreaking(dt) {
+  if ((!breakMode && !breakBgMode) || !lastDirection) { 
+    stopBreaking(); 
+    return; 
+  }
 
   // Calculamos bloque objetivo según última dirección
   let wx, wy;
-  if(lastDirection.dy > 0){
-    wx = Math.floor(player.x + player.width/2);
+
+  if (crouching && player.onGround) {
+    // 👉 Si está agachado en modo normal, romper hacia abajo
+    wx = Math.floor(player.x + player.width / 2);
     wy = Math.floor(player.y + player.height);
-  } else if(lastDirection.dy < 0){
-    wx = Math.floor(player.x + player.width/2);
+  } else if (lastDirection.dy > 0) {
+    // 👉 Dirección hacia abajo
+    wx = Math.floor(player.x + player.width / 2);
+    wy = Math.floor(player.y + player.height);
+  } else if (lastDirection.dy < 0) {
+    // 👉 Dirección hacia arriba
+    wx = Math.floor(player.x + player.width / 2);
     wy = Math.floor(player.y - 1);
   } else {
-    wx = Math.floor(player.x + lastDirection.dx);
-    wy = Math.floor(player.y + player.height/2);
+    // 👉 Dirección horizontal
+    wx = Math.floor(player.x + player.width / 2 + lastDirection.dx * 0.5);
+    wy = Math.floor(player.y + player.height / 2);
   }
 
   // --- Diferencia entre capa 1 y capa 2 ---
   let type = breakMode ? getBlock(wx, wy) : getBlockBg(wx, wy);
 
-  if(!type) { stopBreaking(); return; }
+  if (!type) { 
+    stopBreaking(); 
+    return; 
+  }
 
-  if(!breaking.active || breaking.wx!==wx || breaking.wy!==wy){
+  if (!breaking.active || breaking.wx !== wx || breaking.wy !== wy) {
     breaking.active = true;
     breaking.wx = wx;
     breaking.wy = wy;
@@ -3181,11 +3195,10 @@ function handleBreaking(dt){
   }
 
   breaking.delay += dt;
-  if(breaking.delay >= 0.5){
+  if (breaking.delay >= 0.5) {
     updateBreaking(dt);
   }
 }
-
 
 function updateBreaking(dt){
   if(!breaking.active) return;
