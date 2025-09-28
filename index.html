@@ -2026,25 +2026,61 @@ let player = {
   vx:0, vy:0, onGround:false, 
   facing: 1 // 1 = derecha, -1 = izquierda
 };
+const handOffsets = {
+  "Texturas/Cubs1.png": { x:6, y:70, scale:1, rotation:40, flip:-1 },
+  "Texturas/Cubs2.png": { x:20, y:70, scale:1, rotation:40, flip:-1 },
+  "Texturas/Cubs3.png": { x:8, y:70, scale:1, rotation:40, flip:-1 },
+  "Texturas/Cubs4.png": { x:1, y:60, scale:1, rotation:20, flip:-1 },
+  "Texturas/Cubs_rompiendo1.png": { x:1, y:30, scale:1, rotation:330, flip:-1 },
+  "Texturas/Cubs_rompiendo2.png": { x:9, y:20, scale:1, rotation:300, flip:-1 },
+  "Texturas/Cub_agachado1.png": { x:9, y:80, scale:1, rotation:50, flip:-1 },
+  "Texturas/Cub_agachado2.png": { x:10, y:80, scale:1, rotation:50, flip:-1 },
+  "Texturas/Cub_agachado3.png": { x:5, y:80, scale:1, rotation:50, flip:-1 },
+  "Texturas/Cub_agachado4.png": { x:1, y:80, scale:1, rotation:50, flip:-1 },
+  "Texturas/Cubs_salto.png": { x:15, y:10, scale:1, rotation:320, flip:-1 }
+};
+// Escala global de objetos en mano (aplicada siempre)
+const HAND_SCALE = 0.5;
+
+// Correcciones específicas por frame
+const handAdjustments = {
+  // caminando
+  "Texturas/Cubs1.png": { x: 5,  y: -30, scale: 1 },
+  "Texturas/Cubs2.png": { x: 0,  y: -30, scale: 1 },
+  "Texturas/Cubs3.png": { x: 5,  y: -30, scale: 1 },
+  "Texturas/Cubs4.png": { x: +10,  y: -25, scale: 1 },
+
+  // agachado
+  "Texturas/Cub_agachado1.png": { x: +9, y: -30, scale: 1 },
+  "Texturas/Cub_agachado2.png": { x: +9, y: -30, scale: 1 },
+  "Texturas/Cub_agachado3.png": { x: +9, y: -30, scale: 1 },
+  "Texturas/Cub_agachado4.png": { x: +9, y: -30, scale: 1 },
+
+  // quieto (usa Cubs1 como base, pero puedes ponerlo aparte si quieres)
+  // "Texturas/Cubs_idle.png": { x: 0, y: -15, scale: 1 },
+
+  // rompiendo y salto sin cambios
+  "Texturas/Cubs_rompiendo1.png": { x: 0, y: 0, scale: 1 },
+  "Texturas/Cubs_rompiendo2.png": { x: 0, y: 0, scale: 1 },
+  "Texturas/Cubs_salto.png":      { x: 0, y: 0, scale: 1 }
+};
 
 // === Dibujar jugador con animación ===
 function drawPlayer(dt) {
   let frames;
 
   if (breaking.active) {
-    frames = breakFrames; // 2 frames
+    frames = breakFrames;
   } else if (!player.onGround && jumpPressed) {
-    frames = jumpFrames;  // 1 frame
+    frames = jumpFrames;
   } else if (crouching) {
-    frames = crouchFrames; // 4 frames
+    frames = crouchFrames;
   } else {
-    frames = playerFrames; // 4 frames
+    frames = playerFrames;
   }
 
-  // Seguridad: si frames está vacío, salir
   if (!frames || frames.length === 0) return;
 
-  // Avanzar frames solo si hay más de 1
   if (frames.length > 1 && (leftPressed || rightPressed || breaking.active)) {
     frameTimer += dt;
     if (frameTimer >= 0.2) {
@@ -2055,23 +2091,51 @@ function drawPlayer(dt) {
     currentFrame = 0;
   }
 
-  const img = frames[currentFrame];
-  if (!img || !img.complete) return;
+  const playerImg = frames[currentFrame];
+  if (!playerImg || !playerImg.complete) return;
 
   const px = player.x * BLOCK_SIZE - cameraX;
   const py = player.y * BLOCK_SIZE - cameraY;
   const pw = player.width * BLOCK_SIZE;
   const ph = player.height * BLOCK_SIZE;
 
+  // === DIBUJAR JUGADOR ===
   ctx.save();
   if (player.facing === 1) {
     ctx.translate(px + pw, 0);
-    ctx.scale(-1, 1);         // 🔄 voltea la textura original
-    ctx.drawImage(img, 0, py, pw, ph);
+    ctx.scale(-1, 1);
+    ctx.drawImage(playerImg, 0, py, pw, ph);
   } else {
-    ctx.drawImage(img, px, py, pw, ph);
+    ctx.drawImage(playerImg, px, py, pw, ph);
   }
   ctx.restore();
+
+  // === DIBUJAR OBJETO EN MANO ===
+  const frameKey = playerImg.src.split("/").slice(-2).join("/"); 
+  const offset = handOffsets[frameKey];
+  const adjust = handAdjustments[frameKey] || { x: 0, y: 0, scale: 1 };
+
+  const selected = inventory[selectedSlot];
+  if (offset && selected && selected.texture) {
+    const itemTex = new Image();
+    itemTex.src = selected.texture;
+
+    ctx.save();
+
+    if (player.facing === 1) {
+      ctx.translate(px + pw - (offset.x + adjust.x), py + offset.y + adjust.y);
+      ctx.scale(-offset.flip * offset.scale * HAND_SCALE * adjust.scale,
+                 offset.scale * HAND_SCALE * adjust.scale);
+    } else {
+      ctx.translate(px + offset.x + adjust.x, py + offset.y + adjust.y);
+      ctx.scale(offset.flip * offset.scale * HAND_SCALE * adjust.scale,
+                offset.scale * HAND_SCALE * adjust.scale);
+    }
+
+    ctx.rotate(offset.rotation * Math.PI / 180);
+    ctx.drawImage(itemTex, -12, -12, 24, 24); // centrado
+    ctx.restore();
+  }
 }
 
 const gravity = 0.9 / BLOCK_SIZE;
