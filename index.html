@@ -958,6 +958,7 @@ const tools = {
 if(window.innerWidth > window.innerHeight){
   panel2.style.display = 'none';
 }
+const starmp3 = document.getElementById("starmp3");
 const qButtons = document.querySelectorAll(".q-btn");
 
 function resizeCanvas(scale) {
@@ -982,22 +983,27 @@ const savedQuality = localStorage.getItem("gameQuality");
 if (savedQuality) {
   const scale = parseFloat(savedQuality);
   resizeCanvas(scale);
-
-  // simular clic en el botón correspondiente después de 10 segundos
-  const savedBtn = Array.from(qButtons).find(btn => parseFloat(btn.dataset.scale) === scale);
-  if (savedBtn) {
-    setTimeout(() => {
-      savedBtn.click();
-    }, 10000); // 10000 ms = 10 segundos
-  }
 }
 
-// evento para los botones
+// evento para los botones de escala
 qButtons.forEach(btn => {
   btn.addEventListener("click", () => {
     const scale = parseFloat(btn.dataset.scale);
     resizeCanvas(scale);
   });
+});
+
+// evento para el botón starmp3
+starmp3.addEventListener("click", () => {
+  // esperar 10 segundos antes de simular clic
+  setTimeout(() => {
+    // encontrar el botón que coincida con la escala guardada
+    const scale = parseFloat(localStorage.getItem("gameQuality"));
+    const savedBtn = Array.from(qButtons).find(btn => parseFloat(btn.dataset.scale) === scale);
+    if (savedBtn) {
+      savedBtn.click();
+    }
+  }, 10000); // 10000 ms = 10 segundos
 });
 
 let lastOrientation = window.innerWidth > window.innerHeight;
