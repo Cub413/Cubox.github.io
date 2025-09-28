@@ -729,6 +729,12 @@ button:active {
 <label for="zoomSlider">Zoom:</label>
 <input type="range" id="zoomSlider" min="50" max="150" value="80">
 <span id="zoomValue">80</span>
+<h3>volumen de efectos</h3>
+<div id="sfx-controls">
+  <button id="sfx-down">-</button>
+  <span id="sfx-label">60</span>
+  <button id="sfx-up">+</button>
+</div>
 
       <div id="fps-toggle" class="setting-btn">mostrar fps: no</div>
      
@@ -958,11 +964,9 @@ function resizeCanvas(scale) {
   width  = window.innerWidth;
   height = window.innerHeight;
 
-  // el canvas renderiza a más píxeles internos
   canvas.width  = width * scale;
   canvas.height = height * scale;
 
-  // pero se escala visualmente al tamaño real de pantalla
   canvas.style.width  = width + "px";
   canvas.style.height = height + "px";
 
@@ -976,7 +980,12 @@ function resizeCanvas(scale) {
 // cargar preferencia guardada
 const savedQuality = localStorage.getItem("gameQuality");
 if (savedQuality) {
-  resizeCanvas(parseFloat(savedQuality));
+  const scale = parseFloat(savedQuality);
+  resizeCanvas(scale);
+
+  // simular clic en el botón correspondiente
+  const savedBtn = Array.from(qButtons).find(btn => parseFloat(btn.dataset.scale) === scale);
+  if (savedBtn) savedBtn.click();
 }
 
 // evento para los botones
@@ -986,6 +995,7 @@ qButtons.forEach(btn => {
     resizeCanvas(scale);
   });
 });
+
 
 let lastOrientation = window.innerWidth > window.innerHeight;
 
@@ -2410,6 +2420,72 @@ function initCraftingSlots3x3(){
   }
 };
 }
+// === Sonido de pasos ===
+const walkSound = new Audio("Texturas/walk.mp3");
+walkSound.volume = parseFloat(localStorage.getItem("sfxVolume")) || 1;
+walkSound.preload = "auto";
+walkSound.loop = false;   // no repetir automático
+
+let lastStepTime = 0;      // marca del último paso
+const stepDelay = 400;     // milisegundos entre pasos (~0.4s)
+
+function playWalkSound() {
+  const now = Date.now();
+
+  if (player.onGround && (leftPressed || rightPressed)) {
+    // ¿ha pasado suficiente tiempo desde el último paso?
+    if (now - lastStepTime > stepDelay) {
+      lastStepTime = now;
+
+      walkSound.pause();            // por seguridad
+      walkSound.currentTime = 0.1;    // arranca en el seg 1
+      walkSound.play().catch(()=>{});
+
+      // cortar en el segundo 2
+      const stopAt = 0.5;
+      const checker = setInterval(() => {
+        if (walkSound.currentTime >= stopAt || walkSound.paused) {
+          walkSound.pause();
+          walkSound.currentTime = 0.5;
+          clearInterval(checker);
+        }
+      }, 30);
+    }
+  } else {
+    // Si deja de caminar o está en el aire → parar sonido inmediatamente
+    if (!walkSound.paused) {
+      walkSound.pause();
+      walkSound.currentTime = 1;
+    }
+    lastStepTime = 0; // reset al soltar
+  }
+}
+
+// --- controles de volumen de efectos ---
+const sfxDown = document.getElementById("sfx-down");
+const sfxUp   = document.getElementById("sfx-up");
+const sfxLabel = document.getElementById("sfx-label");
+
+let sfxVolume = parseFloat(localStorage.getItem("sfxVolume")) || 0.6;
+walkSound.volume = sfxVolume;
+sfxLabel.textContent = Math.round(sfxVolume * 100);
+
+function updateSfxVolume() {
+  walkSound.volume = sfxVolume;
+  sfxLabel.textContent = Math.round(sfxVolume * 100);
+  localStorage.setItem("sfxVolume", sfxVolume.toFixed(2));
+}
+
+sfxDown.addEventListener("click", () => {
+  sfxVolume = Math.max(0, sfxVolume - 0.1);
+  updateSfxVolume();
+});
+
+sfxUp.addEventListener("click", () => {
+  sfxVolume = Math.min(1, sfxVolume + 0.1);
+  updateSfxVolume();
+});
+
 function initCraftingSlots(){
   const craftSlots = document.querySelectorAll('.craft-slot');
   craftSlots.forEach((slot, i)=>{
@@ -3209,6 +3285,7 @@ if (jumpPressed && player.onGround) player.vy = jumpPower;
 
   handleBreaking(dt);
   updateBreaking(dt);
+playWalkSound();
 
   drawChunks();
   drawBreaking();
