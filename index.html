@@ -2131,14 +2131,21 @@ function drawPlayer(dt) {
 
     ctx.save();
 
+    // 🔑 factor de zoom relativo (80 = tamaño base)
+    const zoomFactor = BLOCK_SIZE / 80;
+
+    // 🔑 aplicamos zoom también a la posición
+    const posX = (offset.x + adjust.x) * zoomFactor;
+    const posY = (offset.y + adjust.y) * zoomFactor;
+
     if (player.facing === 1) {
-      ctx.translate(px + pw - (offset.x + adjust.x), py + offset.y + adjust.y);
-      ctx.scale(-offset.flip * offset.scale * HAND_SCALE * adjust.scale,
-                 offset.scale * HAND_SCALE * adjust.scale);
+      ctx.translate(px + pw - posX, py + posY);
+      ctx.scale(-offset.flip * offset.scale * HAND_SCALE * adjust.scale * zoomFactor,
+                 offset.scale * HAND_SCALE * adjust.scale * zoomFactor);
     } else {
-      ctx.translate(px + offset.x + adjust.x, py + offset.y + adjust.y);
-      ctx.scale(offset.flip * offset.scale * HAND_SCALE * adjust.scale,
-                offset.scale * HAND_SCALE * adjust.scale);
+      ctx.translate(px + posX, py + posY);
+      ctx.scale(offset.flip * offset.scale * HAND_SCALE * adjust.scale * zoomFactor,
+                offset.scale * HAND_SCALE * adjust.scale * zoomFactor);
     }
 
     ctx.rotate(offset.rotation * Math.PI / 180);
