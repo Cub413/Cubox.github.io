@@ -673,32 +673,69 @@ button:active {
   pointer-events: none;
 }
 
-  #characterMenu {
-    display: flex;
-    gap: 20px;
-  }
-  .characterOption {
-    text-align: center;
-  }
-  .characterOption img {
-    display: block;
-    margin-bottom: 5px;
-    border: 2px solid white;
-    border-radius: 4px;
-  }
-  .characterOption button {
-    margin-top: 5px;
-    padding: 4px 8px;
-    background:#555;
-    color:white;
-    border:none;
-    border-radius:4px;
-    cursor:pointer;
-  }
-  .characterOption button:hover {
-    background:#777;
-  }
+#characterMenu {
+  display: flex;
+  gap: 30px;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 20px;
+  background: linear-gradient(135deg, #222, #111);
+  border: 2px solid #444;
+  border-radius: 12px;
+  box-shadow: 0 0 20px rgba(0,0,0,0.6);
+}
 
+.characterOption {
+  text-align: center;
+  transition: transform 0.2s ease, filter 0.2s ease;
+}
+
+.characterOption:hover {
+  transform: translateY(-6px);
+  filter: brightness(1.1);
+}
+
+.characterOption img {
+  display: block;
+  margin-bottom: 10px;
+  border: 3px solid #fff;
+  border-radius: 8px;
+  width: 100px;
+  height: 100px;
+  object-fit: cover;
+  box-shadow: 0 0 10px rgba(255,255,255,0.3);
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.characterOption img:hover {
+  border-color: #00ffe7;
+  box-shadow: 0 0 15px #00ffe7;
+}
+
+.characterOption button {
+  margin-top: 8px;
+  padding: 6px 12px;
+  background: #333;
+  color: #fff;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 12px;
+  border: 2px solid #555;
+  border-radius: 6px;
+  cursor: pointer;
+  box-shadow: 0 3px 0 #111;
+  transition: background 0.3s, transform 0.1s;
+}
+
+.characterOption button:hover {
+  background: #00ffe7;
+  color: #111;
+  border-color: #00ffe7;
+}
+
+.characterOption button:active {
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 #111;
+}
 
 </style>
 </head>
@@ -1105,10 +1142,11 @@ particlesToggle.addEventListener("click", () => {
 });
 
   const tracks413 = [
-    "Texturas/Explorer.webm",
-    "Texturas/far.webm",
-    "Texturas/Home.webm",
-    "Texturas/RLX.webm"
+    "Texturas/Explorer.mp3",
+    "Texturas/far.mp3",
+    "Texturas/RLX.mp3",
+    "Texturas/RLX.mp3",
+    "Texturas/Night.mp3"
   ];
 
   let playlist413 = [];
