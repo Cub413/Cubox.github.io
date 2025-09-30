@@ -2241,11 +2241,14 @@ if (type === 'leaf') {
         ) continue;
 
         ctx.save();
-        ctx.globalAlpha = 0.9; // más oscuro
-        ctx.drawImage(tex, screenX, screenY, BLOCK_SIZE, BLOCK_SIZE);
-        ctx.fillStyle = "rgba(0,0,0,0.3)"; // sombra
-        ctx.fillRect(screenX, screenY, BLOCK_SIZE, BLOCK_SIZE);
-        ctx.restore();
+ctx.drawImage(tex, screenX, screenY, BLOCK_SIZE, BLOCK_SIZE);
+
+// oscurecer un poco con negro semitransparente
+ctx.fillStyle = "rgba(0, 0, 0, 0.3)"; // oscurece sin llegar a negro
+ctx.fillRect(screenX, screenY, BLOCK_SIZE, BLOCK_SIZE);
+
+ctx.restore();
+
       }
     }
 
@@ -3790,6 +3793,79 @@ function placeBlock(wx, wy){
   renderInventoryGrid();
   initCraftingSlots3x3Selection();
 }
+let dayspeed = 1; // 1 = ciclo en 25 min
+const DAY_LENGTH = 25 * 60 * 1000;
+const TRANSITION_TIME = 3000;
+
+const phases = [
+  { name: "amanecer",    color: [255, 120, 50]  },
+  { name: "día",         color: [70, 200, 255]  },
+  { name: "medio día",   color: [0, 150, 255]   },
+  { name: "tarde",       color: [255, 180, 40]  },
+  { name: "atardecer",   color: [255, 60, 80]   },
+  { name: "noche",       color: [30, 30, 100]   },
+  { name: "media noche", color: [5, 5, 40]      }
+];
+
+let dayStart = performance.now();
+let lastPhaseIndex = 0;
+let transitionStart = performance.now();
+let transitioning = false;
+
+function lerp(a, b, t) { return a + (b - a) * t; }
+function rgbToStr(c) { return `rgb(${c[0]},${c[1]},${c[2]})`; }
+
+function getCurrentSkyColor() {
+  let now = performance.now();
+  let elapsed = ((now - dayStart) * dayspeed) % DAY_LENGTH;
+  let phaseDuration = DAY_LENGTH / phases.length;
+  let phaseIndex = Math.floor(elapsed / phaseDuration);
+
+  if (phaseIndex !== lastPhaseIndex && !transitioning) {
+    transitioning = true;
+    transitionStart = now;
+    lastPhaseIndex = phaseIndex;
+  }
+
+  let currentColor = phases[phaseIndex].color;
+  let prevIndex = (phaseIndex - 1 + phases.length) % phases.length;
+  let prevColor = phases[prevIndex].color;
+
+  if (transitioning) {
+    let t = (now - transitionStart) / TRANSITION_TIME;
+    if (t >= 1) {
+      t = 1;
+      transitioning = false;
+    }
+    return [
+      Math.round(lerp(prevColor[0], currentColor[0], t)),
+      Math.round(lerp(prevColor[1], currentColor[1], t)),
+      Math.round(lerp(prevColor[2], currentColor[2], t))
+    ];
+  } else {
+    return currentColor;
+  }
+}
+
+// === Pintar franjas horizontales fijas ===
+function drawSkyStripes() {
+  const baseColor = getCurrentSkyColor();
+
+  // generar 4 tonos derivados (más claros/osc.)
+  const stripes = [
+    [baseColor[0], baseColor[1], baseColor[2]],
+    [Math.min(255, baseColor[0] + 30), Math.min(255, baseColor[1] + 30), Math.min(255, baseColor[2] + 30)],
+    [Math.max(0, baseColor[0] - 20), Math.max(0, baseColor[1] - 20), Math.max(0, baseColor[2] - 20)],
+    [Math.max(0, baseColor[0] - 40), Math.max(0, baseColor[1] - 40), Math.max(0, baseColor[2] - 40)]
+  ];
+
+  const stripeHeight = height / stripes.length;
+
+  for (let i = 0; i < stripes.length; i++) {
+    ctx.fillStyle = rgbToStr(stripes[i]);
+    ctx.fillRect(0, i * stripeHeight, width, stripeHeight);
+  }
+}
 
 // Touch para colocar bloque
 
@@ -3816,6 +3892,7 @@ if (jumpPressed && player.onGround) player.vy = jumpPower;
   movePlayer();
   cameraX = player.x*BLOCK_SIZE - width/2 + BLOCK_SIZE/2;
   cameraY = player.y*BLOCK_SIZE - height/2 + BLOCK_SIZE/2;
+drawSkyStripes(); // cielo con franjas
 
   handleBreaking(dt);
   updateBreaking(dt);
