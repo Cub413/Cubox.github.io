@@ -948,7 +948,7 @@ button:active {
 
 <div id="pri-container">
   <div class="control-btn" id="pri-btn">PRI</div>
-  <div class="control-btn" id="pri-bg-btn">BG</div>
+
 </div>
 
 </div>
@@ -1019,11 +1019,11 @@ const tools = {
     speed: 0.25
   },
   stone_pickaxe: {
-    fastBlocks: ['stone','coal','iron'],
+    fastBlocks: ['stone','coal_ore','iron'],
     speed: 0.15
   },
   iron_pickaxe: {
-    fastBlocks: ['stone','coal','iron','gold','diamond'],
+    fastBlocks: ['stone','coal_ore','iron','gold','diamond'],
     speed: 0.1
   },
 
@@ -1296,6 +1296,8 @@ const CHUNK_SIZE = 10;
 const textures = {};
 textures.grass = new Image(); textures.grass.src = 'Texturas/cesped_parte_costado.jpg';
 textures.dirt = new Image(); textures.dirt.src = 'Texturas/tierra.jpg';
+textures.coal_ore = new Image();
+textures.coal_ore.src = 'Texturas/carbon_bloque.png';
 textures.stone = new Image(); textures.stone.src = 'Texturas/piedra.jpg';
 textures.leaf = new Image();  textures.leaf.src = 'Texturas/oja.png';
 textures.log  = new Image();  textures.log.src  = 'Texturas/tronco.png';
@@ -1313,34 +1315,70 @@ for(let i=1;i<=5;i++){
   img.src = `Texturas/crack${i}.png`;
   crackTextures.push(img);
 }
+// --- Generar vetas de carbón ---
+function generateCoalVein(chunk, localX, localY){
+  let veinSize = 1 + Math.floor(Math.random() * 6); // 1 a 6 bloques
 
-// Generación de chunks
-let chunks = {};
-function generateChunk(chunkX){
-  if(chunks[chunkX]) return chunks[chunkX];
-  let surfaceHeight = ROWS-50;
-  let currentHeight = surfaceHeight;
-  let data = [];
-  for(let x=0; x<CHUNK_SIZE; x++){
-    let worldX = chunkX*CHUNK_SIZE + x;
-    let change = Math.floor(Math.random()*3)-1;
-    currentHeight += change;
-    if(currentHeight<surfaceHeight-5) currentHeight = surfaceHeight-5;
-    if(currentHeight>surfaceHeight+2) currentHeight = surfaceHeight+2;
-    for(let y=0; y<ROWS; y++){
-      if(!data[y]) data[y] = [];
-      if(y<currentHeight) data[y][x] = null;
-      else if(y===currentHeight) data[y][x]='grass';
-      else if(y<currentHeight+3) data[y][x]='dirt';
-      else data[y][x]='stone';
+  for(let i = 0; i < veinSize; i++){
+    let dx = localX + Math.floor(Math.random() * 3) - 1;
+    let dy = localY + Math.floor(Math.random() * 3) - 1;
+
+    if(chunk.data[dy] && chunk.data[dy][dx] === 'stone'){
+      chunk.data[dy][dx] = 'coal_ore';
     }
   }
-  chunks[chunkX] = {x: chunkX, data};
+}
+let chunks = {};
+let Worlddata = {};   // lo que ya usamos en generateChunk
+let worldData = Worlddata; // 👈 alias para los que usan worldData
+
+// --- Generación de chunks (frente) ---
+function generateChunk(chunkX) {
+  if (chunks[chunkX]) return chunks[chunkX];
+
+  let surfaceHeight = ROWS - 50;
+  let currentHeight = surfaceHeight;
+  let data = [];
+
+  for (let x = 0; x < CHUNK_SIZE; x++) {
+    let worldX = chunkX * CHUNK_SIZE + x;
+    let change = Math.floor(Math.random() * 3) - 1;
+    currentHeight += change;
+
+    if (currentHeight < surfaceHeight - 5) currentHeight = surfaceHeight - 5;
+    if (currentHeight > surfaceHeight + 2) currentHeight = surfaceHeight + 2;
+
+    for (let y = 0; y < ROWS; y++) {
+      if (!data[y]) data[y] = [];
+
+      if (y < currentHeight) {
+        data[y][x] = null;
+      }
+      else if (y === currentHeight) {
+        data[y][x] = 'grass';
+      }
+      else if (y < currentHeight + 3) {
+        data[y][x] = 'dirt';
+      }
+      else {
+        data[y][x] = 'stone';
+
+        // 🎯 Generar carbón solo dentro de la piedra
+        if (y > 30 && y < 70 && Math.random() < 0.02) {
+          generateCoalVein({ data }, x, y);
+        }
+      }
+    }
+  }
+
+  // Guardar en ambos sistemas
+  chunks[chunkX] = { x: chunkX, data };
+  Worlddata[chunkX] = data; // 👈 sincronizado
+
   return chunks[chunkX];
 }
-// === Capa de fondo (segunda capa) ===
-let chunksBg = {};
 
+// --- Generación de la capa de fondo (bg) ---
 function generateChunkBg(chunkX){
   if(chunksBg[chunkX]) return chunksBg[chunkX];
 
@@ -1354,11 +1392,10 @@ function generateChunkBg(chunkX){
     }
   }
 
-  // 🌳 Generación de árboles
+  // 🌳 Árboles en la capa bg
   for(let x=0; x<CHUNK_SIZE; x++){
     for(let y=0; y<ROWS; y++){
       if(data[y][x] === 'grass'){ 
-        // 10% de probabilidad de árbol en ese bloque
         if(Math.random() < 0.1){
           generateTree({data}, x, y);
         }
@@ -1369,6 +1406,52 @@ function generateChunkBg(chunkX){
   chunksBg[chunkX] = {x: chunkX, data};
   return chunksBg[chunkX];
 }
+
+// === Capa de fondo (segunda capa) ===
+let chunksBg = {};
+
+function generateChunk(chunkX){
+  if(chunks[chunkX]) return chunks[chunkX];
+  let surfaceHeight = ROWS - 50;
+  let currentHeight = surfaceHeight;
+  let data = [];
+
+  for(let x=0; x<CHUNK_SIZE; x++){
+    let worldX = chunkX * CHUNK_SIZE + x;
+    let change = Math.floor(Math.random()*3)-1;
+    currentHeight += change;
+
+    if(currentHeight < surfaceHeight-5) currentHeight = surfaceHeight-5;
+    if(currentHeight > surfaceHeight+2) currentHeight = surfaceHeight+2;
+
+    for(let y=0; y<ROWS; y++){
+      if(!data[y]) data[y] = [];
+
+      if(y < currentHeight){
+        data[y][x] = null;
+      }
+      else if(y === currentHeight){
+        data[y][x] = 'grass';
+      }
+      else if(y < currentHeight+3){
+        data[y][x] = 'dirt';
+      }
+      else {
+        data[y][x] = 'stone';
+
+        // 🎯 Generar carbón solo dentro de la piedra
+        // entre capas 30 y 70 con baja probabilidad
+        if(y > 30 && y < 70 && Math.random() < 0.02){
+          generateCoalVein({data}, x, y);
+        }
+      }
+    }
+  }
+
+  chunks[chunkX] = {x: chunkX, data};
+  return chunks[chunkX];
+}
+
 
 
 const invBtn = document.getElementById('inventory-btn');
@@ -1421,12 +1504,14 @@ secretClose.addEventListener("click", () => {
 const allItems = [
   { type: "grass", src: "Texturas/cesped_parte_costado.jpg" },
   { type: "dirt", src: "Texturas/tierra.jpg" },
+  { type: "coal_ore", src: "Texturas/carbon_bloque.png" },
   { type: "stone", src: "Texturas/piedra.jpg" },
   { type: "log", src: "Texturas/tronco.png" },
   { type: "leaf", src: "Texturas/oja.png" },
   { type: "plank", src: "Texturas/tablon.png" },
   { type: "crafting_table", src: "Texturas/mesa_de_crafteo.png" },
   { type: "stick", src: "Texturas/palo.png" },
+  { type: "coal", src: "Texturas/carbon_item.png" },
 
   // Herramientas
   { type: "wood_axe", src: "Texturas/hachad_madera.png" },
@@ -2097,6 +2182,18 @@ function setBlock(wx, wy, type){
   let chunk = generateChunk(chunkX);
   if(chunk.data[wy]) chunk.data[wy][localX] = type;
 }
+function breakCoal(wx, wy){
+  // borrar bloque del mundo
+  setBlock(wx, wy, null);
+
+  // añadir al inventario el mismo bloque
+  addItemToInventory("coal_ore", textures.coal_ore.src);
+
+  // refrescar UI
+  renderHotbar();
+  renderInventoryGrid();
+}
+
 // ==== Manejo de la capa 2 (fondo) ====
 function getBlockBg(wx, wy){
   let chunkX = Math.floor(wx/CHUNK_SIZE);
@@ -2863,6 +2960,81 @@ const recipes3x3 = [
     ],
     result: {type:'plank', texture:'Texturas/tablon.png', baseCount:4}
   },
+  
+  {
+    pattern: [
+      'coal_ore', null, null,
+      null,       null, null,
+      null,       null, null
+    ],
+    result: {type:'coal', texture:'Texturas/carbon_item.png', baseCount:4}
+  },
+  {
+    pattern: [
+      null, 'coal_ore', null,
+      null, null,       null,
+      null, null,       null
+    ],
+    result: {type:'coal', texture:'Texturas/carbon_item.png', baseCount:4}
+  },
+  {
+    pattern: [
+      null, null, 'coal_ore',
+      null, null, null,
+      null, null, null
+    ],
+    result: {type:'coal', texture:'Texturas/carbon_item.png', baseCount:4}
+  },
+  {
+    pattern: [
+      null, null, null,
+      'coal_ore', null, null,
+      null,       null, null
+    ],
+    result: {type:'coal', texture:'Texturas/carbon_item.png', baseCount:4}
+  },
+  {
+    pattern: [
+      null, null, null,
+      null, 'coal_ore', null,
+      null, null,       null
+    ],
+    result: {type:'coal', texture:'Texturas/carbon_item.png', baseCount:4}
+  },
+  {
+    pattern: [
+      null, null, null,
+      null, null, 'coal_ore',
+      null, null, null
+    ],
+    result: {type:'coal', texture:'Texturas/carbon_item.png', baseCount:4}
+  },
+  {
+    pattern: [
+      null, null, null,
+      null, null, null,
+      'coal_ore', null, null
+    ],
+    result: {type:'coal', texture:'Texturas/carbon_item.png', baseCount:4}
+  },
+  {
+    pattern: [
+      null, null, null,
+      null, null, null,
+      null, 'coal_ore', null
+    ],
+    result: {type:'coal', texture:'Texturas/carbon_item.png', baseCount:4}
+  },
+  {
+    pattern: [
+      null, null, null,
+      null, null, null,
+      null, null, 'coal_ore'
+    ],
+    result: {type:'coal', texture:'Texturas/carbon_item.png', baseCount:4}
+  },
+
+
   {
     pattern: [
       null, 'log', null,
@@ -3111,6 +3283,26 @@ const recipes = [
     result: {type:'stick', texture:'Texturas/palo.png', baseCount:4}
   },
   {
+    pattern: ['coal_ore',null,
+              null,null],
+    result: {type:'coal', texture:'Texturas/carbon_item.png', baseCount:4}
+  },
+  {
+    pattern: [null,'coal_ore',
+              null,null],
+    result: {type:'coal', texture:'Texturas/carbon_item.png', baseCount:4}
+  },
+    {
+    pattern: [null,null,
+              'coal_ore',null],
+    result: {type:'coal', texture:'Texturas/carbon_item.png', baseCount:4}
+  },
+    {
+    pattern: [null,null,
+              null,'coal_ore'],
+    result: {type:'coal', texture:'Texturas/carbon_item.png', baseCount:4}
+  },
+  {
     pattern: [null,'log',
               null,null],
     result: {type:'plank', texture:'Texturas/tablon.png', baseCount:4}
@@ -3295,37 +3487,39 @@ document.getElementById('down').addEventListener('touchend', () => {
 
 // Botón PRI
 // === Botones PRI y BG ===
-let breakMode = false;     // capa 1
-let breakBgMode = false;   // capa 2
-
+// --- Estado y botón único PRI ---
+let breakMode = false;      // ahora solo un modo
 const priBtn = document.getElementById('pri-btn');
-const priBgBtn = document.getElementById('pri-bg-btn');
 
-// PRI (frente)
-priBtn.addEventListener('touchstart', () => {
-  breakMode = !breakMode;
-  if(breakMode){
-    priBtn.classList.add('active');
-    breakBgMode = false;
-    priBgBtn.classList.remove('active');
-  } else {
-    priBtn.classList.remove('active');
-    stopBreaking();
-  }
-});
-
-// BG (fondo)
-priBgBtn.addEventListener('touchstart', () => {
-  breakBgMode = !breakBgMode;
-  if(breakBgMode){
-    priBgBtn.classList.add('active');
+// tocar inicia (si no estás moviendo) — mantener presionado para romper
+priBtn.addEventListener('touchstart', (e) => {
+  if (leftPressed || rightPressed || jumpPressed) {
+    // si estamos moviendo, no activar
     breakMode = false;
     priBtn.classList.remove('active');
-  } else {
-    priBgBtn.classList.remove('active');
-    stopBreaking();
+    return;
   }
+  breakMode = true;
+  priBtn.classList.add('active');
 });
+
+// soltar detiene completamente
+priBtn.addEventListener('touchend', () => {
+  breakMode = false;
+  priBtn.classList.remove('active');
+  stopBreaking();
+});
+// --- Nuevo sistema de "breaking" que soporta cola para capa fondo ---
+let breaking = {
+  active: false,
+  wx: 0, wy: 0,
+  progress: 0,
+  time: 0,
+  type: null,
+  layer: null,       // 'front' o 'bg'
+  queueBg: false,    // si había bloque en bg para romper después
+  delay: 0
+};
 
 // Datos de bloques
 const blockData = {
@@ -3334,96 +3528,141 @@ const blockData = {
   'grass': {time:5},
   'log': {time:15},
   'leaf': {time:0.5},
-  'plank': {time:10},          // tablones → intermedio
-  'crafting_table': {time:20}  // mesa de crafteo → más resistente
+  'plank': {time:10},
+  'crafting_table': {time:20},
+  'coal_ore': {time:20}   // 👈 nuevo mineral
 };
-
 // Romper bloques
-let breaking = {active:false, wx:0, wy:0, progress:0, time:0, type:null, delay:0};
 
 function handleBreaking(dt) {
-  if ((!breakMode && !breakBgMode) || !lastDirection) { 
-    stopBreaking(); 
-    return; 
+  // si no está activo el modo romper o si el jugador se mueve → cancelar
+  if (!breakMode || leftPressed || rightPressed || jumpPressed) {
+    if (breakMode && (leftPressed || rightPressed || jumpPressed)) {
+      // desactivar PRI si comenzamos a movernos
+      breakMode = false;
+      priBtn.classList.remove('active');
+    }
+    stopBreaking();
+    return;
+  }
+let wx, wy;
+
+// --- Abajo (incluye agachado en suelo) ---
+if ((crouching && player.onGround) || lastDirection.dy > 0) {
+  wx = Math.floor(player.x + player.width / 2);
+  wy = Math.floor(player.y + player.height); // 👈 sin +1
+}
+// --- Arriba ---
+else if (lastDirection.dy < 0) {
+  wx = Math.floor(player.x + player.width / 2);
+  wy = Math.floor(player.y - 1); // bloque justo arriba
+}
+// --- Izquierda / Derecha ---
+else if (lastDirection.dx !== 0) {
+  wx = Math.floor(player.x + player.width / 2) + lastDirection.dx; // 👈 bloque lateral completo
+  wy = Math.floor(player.y + player.height / 2);
+}
+// --- Por defecto ---
+else {
+  wx = Math.floor(player.x + player.width / 2);
+  wy = Math.floor(player.y + player.height / 2);
+}
+
+  // si ya estamos rompiendo y es el mismo bloque, seguimos
+  if (breaking.active && breaking.wx === wx && breaking.wy === wy) {
+    breaking.delay += dt;
+    if (breaking.delay >= 0.05) updateBreaking(dt);
+    return;
   }
 
-  // Calculamos bloque objetivo según última dirección
-  let wx, wy;
+  // nuevo objetivo: revisamos capa frente y fondo
+  const frontType = getBlock(wx, wy);
+  const bgType    = getBlockBg(wx, wy);
 
-  if (crouching && player.onGround) {
-    // 👉 Si está agachado en modo normal, romper hacia abajo
-    wx = Math.floor(player.x + player.width / 2);
-    wy = Math.floor(player.y + player.height);
-  } else if (lastDirection.dy > 0) {
-    // 👉 Dirección hacia abajo
-    wx = Math.floor(player.x + player.width / 2);
-    wy = Math.floor(player.y + player.height);
-  } else if (lastDirection.dy < 0) {
-    // 👉 Dirección hacia arriba
-    wx = Math.floor(player.x + player.width / 2);
-    wy = Math.floor(player.y - 1);
-  } else {
-    // 👉 Dirección horizontal
-    wx = Math.floor(player.x + player.width / 2 + lastDirection.dx * 0.5);
-    wy = Math.floor(player.y + player.height / 2);
+  if (!frontType && !bgType) {
+    stopBreaking();
+    return;
   }
 
-  // --- Diferencia entre capa 1 y capa 2 ---
-  let type = breakMode ? getBlock(wx, wy) : getBlockBg(wx, wy);
-
-  if (!type) { 
-    stopBreaking(); 
-    return; 
-  }
-
-  if (!breaking.active || breaking.wx !== wx || breaking.wy !== wy) {
+  // prioriza frente; si hay fondo también, lo encolamos
+  if (frontType) {
     breaking.active = true;
-    breaking.wx = wx;
-    breaking.wy = wy;
-    breaking.type = type;
-    breaking.time = 0;
-    breaking.progress = 0;
-    breaking.delay = 0;
-  }
-
-  breaking.delay += dt;
-  if (breaking.delay >= 0.5) {
-    updateBreaking(dt);
+    breaking.wx = wx; breaking.wy = wy;
+    breaking.type = frontType;
+    breaking.layer = 'front';
+    breaking.time = 0; breaking.progress = 0; breaking.delay = 0;
+    breaking.queueBg = !!bgType;
+  } else {
+    // no hay frente, pero sí fondo -> rompemos fondo directamente
+    breaking.active = true;
+    breaking.wx = wx; breaking.wy = wy;
+    breaking.type = bgType;
+    breaking.layer = 'bg';
+    breaking.time = 0; breaking.progress = 0; breaking.delay = 0;
+    breaking.queueBg = false;
   }
 }
 
 function updateBreaking(dt){
-  if(!breaking.active) return;
+  if (!breaking.active) return;
 
+  // impedir romper mientras nos movemos (seguridad extra)
+  if (leftPressed || rightPressed || jumpPressed) {
+    breakMode = false;
+    priBtn.classList.remove('active');
+    stopBreaking();
+    return;
+  }
+
+  // tiempo base según tipo
   let maxTime = blockData[breaking.type]?.time || 5;
 
-  // Verificar herramienta equipada
+  // herramienta reduce tiempo
   const slot = inventory[selectedSlot];
-  if(slot && tools[slot.type]){
+  if (slot && tools[slot.type]) {
     const tool = tools[slot.type];
-    if(tool.fastBlocks.includes(breaking.type)){
-      maxTime *= tool.speed; // aplica la velocidad del pico
+    if (tool.fastBlocks.includes(breaking.type)) {
+      maxTime *= tool.speed;
     }
   }
 
   breaking.time += dt;
-  breaking.progress = Math.min(breaking.time/maxTime,1);
+  breaking.progress = Math.min(breaking.time / maxTime, 1);
 
-  if(breaking.progress>=1){
-    if(breakMode){
+  if (breaking.progress >= 1) {
+    // aplicar la rotura según la capa actual
+    if (breaking.layer === 'front') {
       setBlock(breaking.wx, breaking.wy, null);
       addItem(breaking.type);
-    } else if(breakBgMode){
+    } else if (breaking.layer === 'bg') {
       setBlockBg(breaking.wx, breaking.wy, null);
       addItem(breaking.type);
     }
+
+    // si había cola para bg y acabamos de romper front => iniciar bg
+    if (breaking.layer === 'front' && breaking.queueBg) {
+      const bgType = getBlockBg(breaking.wx, breaking.wy);
+      if (bgType) {
+        breaking.type = bgType;
+        breaking.layer = 'bg';
+        breaking.time = 0;
+        breaking.progress = 0;
+        breaking.delay = 0;
+        breaking.queueBg = false;
+        return; 
+      }
+    }
+
+    // si no hay más que romper, detener
     stopBreaking();
   }
 }
 
 function stopBreaking(){
-  breaking.active=false;
-  breaking.wx=0; breaking.wy=0; breaking.type=null; breaking.time=0; breaking.progress=0; breaking.delay=0;
+  breaking.active = false;
+  breaking.wx = 0; breaking.wy = 0; breaking.type = null;
+  breaking.time = 0; breaking.progress = 0; breaking.delay = 0;
+  breaking.layer = null; breaking.queueBg = false;
 }
 
 function drawBreaking(){
@@ -3434,18 +3673,20 @@ function drawBreaking(){
   }
 }
 function addItem(type, amount = 1){
-  const textureMap = {
-    stone: 'Texturas/piedra.jpg',
-    dirt: 'Texturas/tierra.jpg',
-    grass: 'Texturas/cesped_parte_costado.jpg',
-    leaf: 'Texturas/oja.png',
-    log:  'Texturas/tronco.png',
-    plank: 'Texturas/tablon.png',
-    crafting_table: 'Texturas/mesa_de_crafteo.png'
-  };
+const textureMap = {
+  stone: 'Texturas/piedra.jpg',
+  dirt: 'Texturas/tierra.jpg',
+  grass: 'Texturas/cesped_parte_costado.jpg',
+  leaf: 'Texturas/oja.png',
+  log:  'Texturas/tronco.png',
+  plank: 'Texturas/tablon.png',
+  crafting_table: 'Texturas/mesa_de_crafteo.png',
+  coal_ore: 'Texturas/carbon_bloque.png'  // 👈 añadido
+};
 
   const itemTextures = {
   stick: 'Texturas/palo.png',
+  coal: 'Texturas/carbon_item.png',
   wood_pickaxe: 'Texturas/pico_madera.png',
   stone_pickaxe: 'Texturas/pico_piedra.png',
 
@@ -3468,6 +3709,7 @@ function addItem(type, amount = 1){
     return; 
   }
 
+
   // Buscar primer slot vacío
   let emptyIndex = inventory.findIndex(s=>!s);
   if(emptyIndex>=0){ 
@@ -3489,6 +3731,20 @@ canvas.addEventListener('touchstart', e=>{
 
   const wx = Math.floor((cx + cameraX)/BLOCK_SIZE);
   const wy = Math.floor((cy + cameraY)/BLOCK_SIZE);
+const block = worldData[wy]?.[wx];
+if(block){
+  if(block === "coal_ore"){
+    // romper carbón
+    setBlock(wx, wy, null);
+    addItemToInventory("coal_ore", textures.coal_ore.src);
+  } else {
+    // romper cualquier otro bloque
+    setBlock(wx, wy, null);
+    addItemToInventory(block, textures[block].src);
+  }
+  renderHotbar();
+  renderInventoryGrid();
+}
 
   // si toca una mesa de crafteo en cualquier capa → abrir crafting
   if(getBlock(wx, wy)==='crafting_table' || getBlockBg(wx, wy)==='crafting_table'){
@@ -3501,7 +3757,7 @@ canvas.addEventListener('touchstart', e=>{
 
 //check 1//
 const nonPlaceable = [
-  'stick',
+  'stick','coal',
   'wood_pickaxe', 'stone_pickaxe',
   'wood_axe', 'stone_axe'
 ];
