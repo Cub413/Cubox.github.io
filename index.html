@@ -617,6 +617,17 @@ button:active {
   z-index: 5000;
   font-family: 'Press Start 2P', monospace;
 }
+#craft3-blur {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  backdrop-filter: blur(6px);
+  background: rgba(0, 0, 0, 0.4);
+  display: none;
+  z-index: 29; /* debajo de #inventory-panel pero encima del juego */
+}
 
 #secret-menu.active {
   right: 0; /* se desliza al abrirse */
@@ -672,6 +683,17 @@ button:active {
   text-shadow: 1px 1px 0 #000; /* contorno negro para más contraste */
   pointer-events: none;
 }
+#craft-blur {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  backdrop-filter: blur(6px);
+  background: rgba(0,0,0,0.4);
+  display: none;
+  z-index: 29; /* debajo del inventario pero encima del juego */
+}
 
 #characterMenu {
   display: flex;
@@ -706,6 +728,17 @@ button:active {
   box-shadow: 0 0 10px rgba(255,255,255,0.3);
   transition: border-color 0.3s ease, box-shadow 0.3s ease;
 }
+#inv-blur {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  backdrop-filter: blur(6px);
+  background: rgba(0,0,0,0.4);
+  display: none;
+  z-index: 29; /* 👈 debajo del inventario */
+}
 
 .characterOption img:hover {
   border-color: #00ffe7;
@@ -736,10 +769,131 @@ button:active {
   transform: translateY(2px);
   box-shadow: 0 1px 0 #111;
 }
-
+#chest-blur {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  backdrop-filter: blur(6px);
+  background: rgba(0, 0, 0, 0.4);
+  display: none;
+  z-index: 5999;
+  /* el panel tiene 6000 */
+}
 </style>
 </head>
 <body>
+  <div id="chest-blur"></div>
+  <!-- Panel Cofre -->
+<div id="cofre-panel" style="
+    display:none;
+    position:fixed;
+    top:50%;
+    left:50%;
+    transform:translate(-50%,-50%);
+    background:#141414AB;
+    border:2px solid #000;
+    padding:6px;
+    border-radius:6px;
+    z-index:6000;
+    color:white;
+    font-family:'Press Start 2P', monospace;
+    max-width:95vw;
+    max-height:95vh;
+    overflow:auto;
+">
+  <h3 style="font-size:12px; margin:4px 0;">Cofre</h3>
+  
+  <!-- Slots del cofre -->
+  <div id="cofre-grid" style="display:grid; grid-template-columns:repeat(9,28px); gap:2px;">
+    <button class="slot" style="width:28px;height:28px;padding:0;margin:0;"></button>
+    <button class="slot" style="width:28px;height:28px;padding:0;margin:0;"></button>
+    <button class="slot" style="width:28px;height:28px;padding:0;margin:0;"></button>
+    <button class="slot" style="width:28px;height:28px;padding:0;margin:0;"></button>
+    <button class="slot" style="width:28px;height:28px;padding:0;margin:0;"></button>
+    <button class="slot" style="width:28px;height:28px;padding:0;margin:0;"></button>
+    <button class="slot" style="width:28px;height:28px;padding:0;margin:0;"></button>
+    <button class="slot" style="width:28px;height:28px;padding:0;margin:0;"></button>
+    <button class="slot" style="width:28px;height:28px;padding:0;margin:0;"></button>
+
+    <button class="slot" style="width:28px;height:28px;padding:0;margin:0;"></button>
+    <button class="slot" style="width:28px;height:28px;padding:0;margin:0;"></button>
+    <button class="slot" style="width:28px;height:28px;padding:0;margin:0;"></button>
+    <button class="slot" style="width:28px;height:28px;padding:0;margin:0;"></button>
+    <button class="slot" style="width:28px;height:28px;padding:0;margin:0;"></button>
+    <button class="slot" style="width:28px;height:28px;padding:0;margin:0;"></button>
+    <button class="slot" style="width:28px;height:28px;padding:0;margin:0;"></button>
+    <button class="slot" style="width:28px;height:28px;padding:0;margin:0;"></button>
+    <button class="slot" style="width:28px;height:28px;padding:0;margin:0;"></button>
+
+    <button class="slot" style="width:28px;height:28px;padding:0;margin:0;"></button>
+    <button class="slot" style="width:28px;height:28px;padding:0;margin:0;"></button>
+    <button class="slot" style="width:28px;height:28px;padding:0;margin:0;"></button>
+    <button class="slot" style="width:28px;height:28px;padding:0;margin:0;"></button>
+    <button class="slot" style="width:28px;height:28px;padding:0;margin:0;"></button>
+    <button class="slot" style="width:28px;height:28px;padding:0;margin:0;"></button>
+    <button class="slot" style="width:28px;height:28px;padding:0;margin:0;"></button>
+    <button class="slot" style="width:28px;height:28px;padding:0;margin:0;"></button>
+    <button class="slot" style="width:28px;height:28px;padding:0;margin:0;"></button>
+  </div>
+
+  <!-- Inventario del jugador dentro del panel del cofre -->
+  <h4 style="margin:6px 0 4px; font-size:10px;">Inventario</h4>
+  <div id="cofre-inventory" style="display:grid; grid-template-columns:repeat(9,28px); gap:2px;">
+    <button class="slot" style="width:28px;height:28px;padding:0;margin:0;"></button>
+    <button class="slot" style="width:28px;height:28px;padding:0;margin:0;"></button>
+    <button class="slot" style="width:28px;height:28px;padding:0;margin:0;"></button>
+    <button class="slot" style="width:28px;height:28px;padding:0;margin:0;"></button>
+    <button class="slot" style="width:28px;height:28px;padding:0;margin:0;"></button>
+    <button class="slot" style="width:28px;height:28px;padding:0;margin:0;"></button>
+    <button class="slot" style="width:28px;height:28px;padding:0;margin:0;"></button>
+    <button class="slot" style="width:28px;height:28px;padding:0;margin:0;"></button>
+    <button class="slot" style="width:28px;height:28px;padding:0;margin:0;"></button>
+
+    <button class="slot" style="width:28px;height:28px;padding:0;margin:0;"></button>
+    <button class="slot" style="width:28px;height:28px;padding:0;margin:0;"></button>
+    <button class="slot" style="width:28px;height:28px;padding:0;margin:0;"></button>
+    <button class="slot" style="width:28px;height:28px;padding:0;margin:0;"></button>
+    <button class="slot" style="width:28px;height:28px;padding:0;margin:0;"></button>
+    <button class="slot" style="width:28px;height:28px;padding:0;margin:0;"></button>
+    <button class="slot" style="width:28px;height:28px;padding:0;margin:0;"></button>
+    <button class="slot" style="width:28px;height:28px;padding:0;margin:0;"></button>
+    <button class="slot" style="width:28px;height:28px;padding:0;margin:0;"></button>
+
+    <button class="slot" style="width:28px;height:28px;padding:0;margin:0;"></button>
+    <button class="slot" style="width:28px;height:28px;padding:0;margin:0;"></button>
+    <button class="slot" style="width:28px;height:28px;padding:0;margin:0;"></button>
+    <button class="slot" style="width:28px;height:28px;padding:0;margin:0;"></button>
+    <button class="slot" style="width:28px;height:28px;padding:0;margin:0;"></button>
+    <button class="slot" style="width:28px;height:28px;padding:0;margin:0;"></button>
+    <button class="slot" style="width:28px;height:28px;padding:0;margin:0;"></button>
+    <button class="slot" style="width:28px;height:28px;padding:0;margin:0;"></button>
+    <button class="slot" style="width:28px;height:28px;padding:0;margin:0;"></button>
+  </div>
+
+<!-- Botón cerrar -->
+<div style="margin-top:8px; display:flex; justify-content:center;">
+  <button onclick="closeChest()" 
+    style="
+      font-size:10px; 
+      padding:4px 10px;
+      background:#2ecc71; 
+      color:black; 
+      border:3px solid #000; 
+      cursor:pointer; 
+      font-family:'Press Start 2P', monospace;
+      image-rendering:pixelated;
+      box-shadow:3px 3px 0 #000;
+      transition:transform 0.1s;
+    "
+    onmousedown="this.style.transform='translate(2px,2px)'; this.style.boxShadow='1px 1px 0 #000';"
+    onmouseup="this.style.transform=''; this.style.boxShadow='3px 3px 0 #000';"
+  >
+    ✖ Cerrar
+  </button>
+</div>
+</div>
   <div id="overlay413">
   <button id="starmp3">▶ COMENZAR</button>
 </div>
@@ -842,6 +996,9 @@ button:active {
 <!-- Hotbar fija en pantalla -->
 <!-- Botón para abrir inventario -->
 <button id="inventory-btn">INV</button>
+<div id="inv-blur"></div>
+<div id="craft3-blur"></div>
+<div id="craft-blur"></div>
 
 <!-- INVENTARIO Y CRAFTING -->
 <div id="inventory-panel">
@@ -1029,12 +1186,12 @@ const tools = {
 
   // === Hachas ===
   wood_axe: {
-    fastBlocks: ['log','leaf','plank','crafting_table'], // bloques de madera y hojas
+    fastBlocks: ['log','chest','leaf','plank','crafting_table'], // bloques de madera y hojas
     speed: 0.25,
     texture: 'Texturas/hachad_madera.png'
   },
   stone_axe: {
-    fastBlocks: ['log','leaf','plank','crafting_table'],
+    fastBlocks: ['log','chest','leaf','plank','crafting_table'],
     speed: 0.15,
     texture: 'Texturas/hachad_piedra.png'
   }
@@ -1305,6 +1462,8 @@ textures.plank = new Image();
 textures.plank.src = 'Texturas/tablon.png';
 textures.particle_leaf = new Image();
 textures.particle_leaf.src = 'Texturas/particle_leaf.png';
+textures.chest = new Image();
+textures.chest.src = 'Texturas/cofre.png';
 
 textures.crafting_table = new Image();
 textures.crafting_table.src = 'Texturas/mesa_de_crafteo.png';
@@ -1456,13 +1615,25 @@ function generateChunk(chunkX){
 
 const invBtn = document.getElementById('inventory-btn');
 const invPanel = document.getElementById('inventory-panel');
+const invBlur = document.getElementById('inv-blur');
 
 invBtn.addEventListener('click', () => {
   if (invPanel.style.display === 'none' || invPanel.style.display === '') {
-    openInventoryNormal(); // siempre abre en modo normal
+    openInventoryNormal();
+    invPanel.style.display = 'block';
+    invBlur.style.display = 'block';
+    document.getElementById("craft-blur").style.display = 'none'; // 🔹 aseguramos que no quede abierto
   } else {
     invPanel.style.display = 'none';
+    invBlur.style.display = 'none';
+    document.getElementById("craft-blur").style.display = 'none'; // 🔹 cerramos también el blur del 3x3
   }
+});
+
+// cerrar inventario si haces click en el fondo
+invBlur.addEventListener('click', () => {
+  invPanel.style.display = 'none';
+  invBlur.style.display = 'none';
 });
 
 // --- Controles de +cantidad- ---
@@ -1491,6 +1662,17 @@ const secretMenu = document.getElementById("secret-menu");
 const secretContent = document.getElementById("secret-content");
 const secretClose = document.getElementById("secret-close");
 const craftArrow = document.querySelector("#crafting-section .arrow");
+const craftBlur = document.getElementById("craft-blur");
+
+craftBlur.addEventListener("click", () => {
+  // cerrar inventario y mesa
+  document.getElementById("inventory-panel").style.display = "none";
+  document.getElementById("crafting-section-3x3").style.display = "none";
+  document.getElementById("crafting-section").style.display = "flex"; // opcional, para que vuelva al 2x2 por defecto
+  craftBlur.style.display = "none";
+
+  usingCrafting3x3 = false;
+});
 
 // abrir al hacer touchmove en la flecha del 2x2
 craftArrow.addEventListener("touchmove", () => {
@@ -1512,7 +1694,8 @@ const allItems = [
   { type: "crafting_table", src: "Texturas/mesa_de_crafteo.png" },
   { type: "stick", src: "Texturas/palo.png" },
   { type: "coal", src: "Texturas/carbon_item.png" },
-
+  { type: "chest", src: "Texturas/cofre.png" },
+{ type: "furnace", src: "Texturas/horno.png" },
   // Herramientas
   { type: "wood_axe", src: "Texturas/hachad_madera.png" },
   { type: "stone_axe", src: "Texturas/hachad_piedra.png" },
@@ -1520,6 +1703,18 @@ const allItems = [
   { type: "stone_pickaxe", src: "Texturas/pico_piedra.png" }
   
 ];
+function paneles(tipo){
+  closeAllPanels(); // cerrar otros antes
+  if(tipo==="cofre") document.getElementById("cofre-panel").style.display="block";
+  if(tipo==="horno") document.getElementById("horno-panel").style.display="block";
+  
+}
+
+function closeAllPanels(){
+  document.getElementById("cofre-panel").style.display="none";
+  document.getElementById("horno-panel").style.display="none";
+  
+}
 
 // función para poblar con todos los objetos
 function populateSecretMenu() {
@@ -2703,7 +2898,6 @@ let craftResult3x3 = null;
 
 let usingCrafting3x3 = false;
 function openCraftingTable() {
-  // mostrar inventario
   invPanel.style.display = 'block';
 
   // ocultar el crafteo 2x2
@@ -2712,9 +2906,12 @@ function openCraftingTable() {
   // mostrar el crafteo 3x3
   document.getElementById('crafting-section-3x3').style.display = 'flex';
 
-  // marcar que estamos usando el 3x3
+  // blur exclusivo del 3x3
+  document.getElementById('craft-blur').style.display = 'block';
+
   usingCrafting3x3 = true;
 }
+
 function openInventoryNormal() {
   invPanel.style.display = 'block';
 
@@ -2724,8 +2921,16 @@ function openInventoryNormal() {
   // ocultar 3x3
   document.getElementById('crafting-section-3x3').style.display = 'none';
 
+  // ocultar blur del 3x3
+  document.getElementById('craft-blur').style.display = 'none';
+
   usingCrafting3x3 = false;
 }
+invBlur.addEventListener('click', () => {
+  invPanel.style.display = 'none';
+  invBlur.style.display = 'none';
+  document.getElementById('craft-blur').style.display = 'none'; // 👈 cerrar también el blur 3x3
+});
 
 function initCraftingSlots3x3(){
   const craftSlots = document.querySelectorAll('.craft-slot-3x3');
@@ -3121,6 +3326,14 @@ const recipes3x3 = [
       null, null,   null
     ],
     result: {type:'crafting_table', texture:'Texturas/mesa_de_crafteo.png', baseCount:1}
+  },
+  {
+    pattern: [
+      'plank', 'plank','plank',
+      'plank', null,'plank',
+      'plank', 'plank',   'plank'
+    ],
+    result: {type:'chest', texture:'Texturas/cofre.png', baseCount:1}
   },
   // esquina inferior izquierda
   {
@@ -3532,6 +3745,7 @@ const blockData = {
   'log': {time:15},
   'leaf': {time:0.5},
   'plank': {time:10},
+   'chest': {time:10},
   'crafting_table': {time:20},
   'coal_ore': {time:20}   // 👈 nuevo mineral
 };
@@ -3684,7 +3898,9 @@ const textureMap = {
   log:  'Texturas/tronco.png',
   plank: 'Texturas/tablon.png',
   crafting_table: 'Texturas/mesa_de_crafteo.png',
+  chest: 'Texturas/cofre.png',
   coal_ore: 'Texturas/carbon_bloque.png'  // 👈 añadido
+  
 };
 
   const itemTextures = {
@@ -3734,27 +3950,43 @@ canvas.addEventListener('touchstart', e=>{
 
   const wx = Math.floor((cx + cameraX)/BLOCK_SIZE);
   const wy = Math.floor((cy + cameraY)/BLOCK_SIZE);
-const block = worldData[wy]?.[wx];
-if(block){
-  if(block === "coal_ore"){
-    // romper carbón
-    setBlock(wx, wy, null);
-    addItemToInventory("coal_ore", textures.coal_ore.src);
-  } else {
-    // romper cualquier otro bloque
-    setBlock(wx, wy, null);
-    addItemToInventory(block, textures[block].src);
-  }
-  renderHotbar();
-  renderInventoryGrid();
+  const block = worldData[wy]?.[wx];
+
+  // 👉 Primero: si es un bloque interactivo (NO se rompe, solo abre panel)
+  if (getBlock(wx, wy) === 'chest' || getBlockBg(wx, wy) === 'chest') {
+  let key = `${wx},${wy}`;
+  openChest(key); // tu función para abrir el cofre
+  chestBlur.style.display = "block"; // 👈 mostramos el blur exclusivo del cofre
+  return;
 }
 
-  // si toca una mesa de crafteo en cualquier capa → abrir crafting
-  if(getBlock(wx, wy)==='crafting_table' || getBlockBg(wx, wy)==='crafting_table'){
-    openCraftingTable();
+  if (getBlock(wx, wy) === 'furnace' || getBlockBg(wx, wy) === 'furnace') {
+    paneles("horno");
+    blurBg.style.display = "block";
     return;
   }
 
+  if (getBlock(wx, wy) === 'crafting_table' || getBlockBg(wx, wy) === 'crafting_table') {
+    openCraftingTable();
+    
+    return;
+  }
+
+  // 👉 Si no es interactivo y existe bloque → romperlo
+  if (block) {
+    if (block === "coal_ore") {
+      setBlock(wx, wy, null);
+      addItemToInventory("coal_ore", textures.coal_ore.src);
+    } else {
+      setBlock(wx, wy, null);
+      addItemToInventory(block, textures[block].src);
+    }
+    renderHotbar();
+    renderInventoryGrid();
+    return; // terminamos aquí si rompimos un bloque
+  }
+
+  // 👉 Si no había bloque, entonces colocar uno
   placeBlock(wx, wy);
 });
 
@@ -3764,6 +3996,13 @@ const nonPlaceable = [
   'wood_pickaxe', 'stone_pickaxe',
   'wood_axe', 'stone_axe'
 ];
+const chestBlur = document.getElementById("chest-blur");
+const chestPanel = document.getElementById("cofre-panel");
+
+chestBlur.addEventListener("click", () => {
+  closeChest();               // tu función que cierra el cofre
+  chestBlur.style.display = "none"; 
+});
 
 function placeBlock(wx, wy){
   const slot = inventory[selectedSlot];
@@ -3772,17 +4011,33 @@ function placeBlock(wx, wy){
   // 🚫 No permitir colocar objetos no colocables
   if(nonPlaceable.includes(slot.type)) return;
 
+  let placed = false;
+
   // 1️⃣ Primero capa de fondo
   if(getBlockBg(wx, wy) === null){
     setBlockBg(wx, wy, slot.type);
+    placed = true;
   }
   // 2️⃣ Si ya hay en fondo, colocar en frente
   else if(getBlock(wx, wy) === null){
     setBlock(wx, wy, slot.type);
+    placed = true;
   }
   // 3️⃣ Si ambas ocupadas → nada
   else {
     return;
+  }
+
+  // 🟢 Si colocamos un cofre, registrar su inventario
+  if(placed && slot.type === "chest"){
+    let key = `${wx},${wy}`;
+    if(!chests[key]) chests[key] = new Array(27).fill(null); // cofre vacío de 27 slots
+  }
+
+  // 🟢 Si colocamos un horno, registrar inventario propio
+  if(placed && slot.type === "furnace"){
+    let key = `${wx},${wy}`;
+    if(!furnaces[key]) furnaces[key] = {input:null, fuel:null, output:null}; 
   }
 
   // ✅ consumir solo 1 bloque
@@ -3793,6 +4048,131 @@ function placeBlock(wx, wy){
   renderInventoryGrid();
   initCraftingSlots3x3Selection();
 }
+// --- Cofres ---
+let chests = {};         // almacena cofres por ID/clave
+let chestOpenKey = null; // cofre actualmente abierto
+
+// abrir cofre (si no existe, se crea vacío)
+function openChest(key) {
+  if (!chests[key]) {
+    chests[key] = new Array(27).fill(null); // inventario vacío si no existe
+  }
+
+  chestOpenKey = key;
+
+  // mostrar panel y fondo borroso
+  document.getElementById("cofre-panel").style.display = "block";
+  document.getElementById("chest-blur").style.display = "block"; // usar el mismo ID
+
+  renderChest(chests[key]);
+  enableChestSelection();
+}
+
+// cerrar cofre
+function closeChest() {
+  document.getElementById("cofre-panel").style.display = "none";
+  document.getElementById("chest-blur").style.display = "none";
+  chestOpenKey = null;
+}
+
+// agregar listener
+document.getElementById("chest-blur").addEventListener("click", closeChest);
+
+// renderizar el cofre + inventario del jugador en el panel
+function renderChest() {
+  const chestInv = chests[chestOpenKey];
+
+  // cofres
+  const chestSlots = document.querySelectorAll('#cofre-grid .slot');
+  chestSlots.forEach((btn, i) => {
+    btn.innerHTML = '';
+    const item = chestInv[i];
+    if (item) {
+      const img = document.createElement('img');
+      img.src = item.texture;
+      btn.appendChild(img);
+
+      if (item.count > 1) {
+        const countDiv = document.createElement('div');
+        countDiv.classList.add('count');
+        countDiv.textContent = item.count;
+        btn.appendChild(countDiv);
+      }
+    }
+  });
+
+  // inventario del jugador
+  const playerSlots = document.querySelectorAll('#cofre-inventory .slot');
+  playerSlots.forEach((btn, i) => {
+    btn.innerHTML = '';
+    const item = inventory[i];
+    if (item) {
+      const img = document.createElement('img');
+      img.src = item.texture;
+      btn.appendChild(img);
+
+      if (item.count > 1) {
+        const countDiv = document.createElement('div');
+        countDiv.classList.add('count');
+        countDiv.textContent = item.count;
+        btn.appendChild(countDiv);
+      }
+    }
+  });
+}
+
+// lógica de clicks
+function enableChestSelection() {
+  const chestInv = chests[chestOpenKey] || (chests[chestOpenKey] = new Array(27).fill(null));
+
+  // slots del cofre
+  const chestSlots = document.querySelectorAll('#cofre-grid .slot');
+  chestSlots.forEach((slot, i) => {
+    slot.onclick = () => {
+      const chestInv = chests[chestOpenKey];
+      const item = chestInv[i];
+      if (item) {
+        // mover stack completo al inventario
+        addItem(item.type, item.count, item.texture);
+        chestInv[i] = null;
+        renderChest();
+      }
+    };
+  });
+
+  // slots del inventario
+  const playerSlots = document.querySelectorAll('#cofre-inventory .slot');
+  playerSlots.forEach((slot, i) => {
+    slot.onclick = () => {
+      const item = inventory[i];
+      if (item) {
+        const chestInv = chests[chestOpenKey];
+
+        // buscar stack existente en el cofre
+        let existing = chestInv.find(s => s && s.type === item.type);
+        if (existing) {
+          existing.count += item.count;
+          inventory[i] = null;
+        } else {
+          // buscar slot vacío
+          let empty = chestInv.findIndex(s => !s);
+          if (empty >= 0) {
+            chestInv[empty] = { ...item };
+            inventory[i] = null;
+          } else {
+            console.log("Cofre lleno!");
+            return;
+          }
+        }
+
+        renderHotbar();
+        renderInventoryGrid();
+        renderChest();
+      }
+    };
+  });
+}
+
 let dayspeed = 1; // 1 = ciclo en 25 min
 const DAY_LENGTH = 25 * 60 * 1000;
 const TRANSITION_TIME = 3000;
