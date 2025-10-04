@@ -1814,10 +1814,12 @@ setInterval(() => {
 
 const ROWS = 100;
 const CHUNK_SIZE = 10;
+// Bloques que NO se oscurecen en la capa 2
 
 // Texturas
 const textures = {};
 textures.grass = new Image(); textures.grass.src = 'Texturas/cesped_parte_costado.jpg';
+textures.flower = new Image(); textures.flower.src = 'Texturas/flor_roja.png';
 textures.dirt = new Image(); textures.dirt.src = 'Texturas/tierra.jpg';
 textures.coal_ore = new Image();
 textures.coal_ore.src = 'Texturas/carbon_bloque.png';
@@ -1856,6 +1858,79 @@ function generateCoalVein(chunk, localX, localY){
 let chunks = {};
 let Worlddata = {};   // lo que ya usamos en generateChunk
 let worldData = Worlddata; // 👈 alias para los que usan worldData
+// 🌿 Configuración de generación especial
+// 🌿 Configuración de bloques especiales
+const specialBlocks = [
+  {
+    block: "flower",
+    onTopOf: "grass",
+    minY: 30,
+    maxY: 90,
+    chance: 0.15,
+    maxPerChunk: 10,
+    minPerChunk: 2,
+    layer: 1 // superficie
+  },
+  {
+    block: "coal_ore",
+    onTopOf: "stone",
+    minY: 40,
+    maxY: 70,
+    chance: 0.03,
+    maxPerChunk: 3,
+    minPerChunk: 1,
+    layer: 0 // subterránea
+  },
+  {
+    block: "diamond_ore",
+    onTopOf: "stone",
+    minY: 75,
+    maxY: 95,
+    chance: 0.01,
+    maxPerChunk: 2,
+    minPerChunk: 0,
+    layer: 0
+  }
+];
+
+function generateSpecialBlocksInChunk(chunkX, layer = 1) {
+  const chunk = layer === 0 ? chunksBg[chunkX] : chunks[chunkX];
+  if (!chunk || !chunk.data) return;
+
+  const data = chunk.data;
+
+  specialBlocks.forEach(cfg => {
+    // Si el bloque tiene layer definido y no coincide, saltar
+    if (cfg.layer !== undefined && cfg.layer !== layer) return;
+
+    let placed = 0;
+    const maxToPlace =
+      Math.floor(Math.random() * (cfg.maxPerChunk - cfg.minPerChunk + 1)) +
+      cfg.minPerChunk;
+
+    for (let y = 1; y < ROWS - 1; y++) {
+      if (!data[y]) continue;
+      for (let x = 0; x < CHUNK_SIZE; x++) {
+        if (placed >= maxToPlace) return;
+
+        const below = data[y][x];
+        const aboveRow = data[y - 1] || [];
+        const above = aboveRow[x];
+
+        if (
+          below === cfg.onTopOf &&
+          !above &&
+          y >= cfg.minY &&
+          y <= cfg.maxY &&
+          Math.random() < cfg.chance
+        ) {
+          data[y - 1][x] = cfg.block;
+          placed++;
+        }
+      }
+    }
+  });
+}
 
 // --- Generación de chunks (frente) ---
 function generateChunk(chunkX) {
@@ -1899,84 +1974,61 @@ function generateChunk(chunkX) {
   // Guardar en ambos sistemas
   chunks[chunkX] = { x: chunkX, data };
   Worlddata[chunkX] = data; // 👈 sincronizado
+generateSpecialBlocksInChunk(chunkX, 1); // genera solo los bloques con layer 1
+
+
+return chunks[chunkX];
+console.log("Bloques especiales generados en chunk:", chunk.x);
 
   return chunks[chunkX];
 }
 
 // --- Generación de la capa de fondo (bg) ---
-function generateChunkBg(chunkX){
-  if(chunksBg[chunkX]) return chunksBg[chunkX];
+function generateChunkBg(chunkX) {
+  if (chunksBg[chunkX]) return chunksBg[chunkX];
 
-  let chunk = generateChunk(chunkX); 
+  // ⚙️ Genera el chunk frontal para copiar su base
+  let chunk = generateChunk(chunkX);
   let data = [];
 
-  for(let y=0; y<ROWS; y++){
+  // 📦 Copiar el terreno base pero SIN bloques especiales de capa 1
+  for (let y = 0; y < ROWS; y++) {
     data[y] = [];
-    for(let x=0; x<CHUNK_SIZE; x++){
-      data[y][x] = chunk.data[y][x];
-    }
-  }
+    for (let x = 0; x < CHUNK_SIZE; x++) {
+      let block = chunk.data[y][x];
 
-  // 🌳 Árboles en la capa bg
-  for(let x=0; x<CHUNK_SIZE; x++){
-    for(let y=0; y<ROWS; y++){
-      if(data[y][x] === 'grass'){ 
-        if(Math.random() < 0.1){
-          generateTree({data}, x, y);
-        }
+      // ❌ Eliminar bloques especiales que son solo de la capa 1
+      const isLayer1Special = specialBlocks.some(
+        sb => sb.block === block && sb.layer === 1
+      );
+
+      if (isLayer1Special) {
+        // reemplaza la flor por aire o por el bloque base debajo
+        data[y][x] = null;
+      } else {
+        data[y][x] = block;
       }
     }
   }
 
-  chunksBg[chunkX] = {x: chunkX, data};
+  // 🌳 Árboles decorativos solo en la capa bg
+  for (let x = 0; x < CHUNK_SIZE; x++) {
+    for (let y = 0; y < ROWS; y++) {
+      if (data[y][x] === "grass" && Math.random() < 0.1) {
+        generateTree({ data }, x, y);
+      }
+    }
+  }
+
+  // 🌍 Generar bloques especiales específicos del layer 0 (menas, etc.)
+  generateSpecialBlocksInChunk(chunkX, 0);
+
+  chunksBg[chunkX] = { x: chunkX, data };
   return chunksBg[chunkX];
 }
 
 // === Capa de fondo (segunda capa) ===
 let chunksBg = {};
-
-function generateChunk(chunkX){
-  if(chunks[chunkX]) return chunks[chunkX];
-  let surfaceHeight = ROWS - 50;
-  let currentHeight = surfaceHeight;
-  let data = [];
-
-  for(let x=0; x<CHUNK_SIZE; x++){
-    let worldX = chunkX * CHUNK_SIZE + x;
-    let change = Math.floor(Math.random()*3)-1;
-    currentHeight += change;
-
-    if(currentHeight < surfaceHeight-5) currentHeight = surfaceHeight-5;
-    if(currentHeight > surfaceHeight+2) currentHeight = surfaceHeight+2;
-
-    for(let y=0; y<ROWS; y++){
-      if(!data[y]) data[y] = [];
-
-      if(y < currentHeight){
-        data[y][x] = null;
-      }
-      else if(y === currentHeight){
-        data[y][x] = 'grass';
-      }
-      else if(y < currentHeight+3){
-        data[y][x] = 'dirt';
-      }
-      else {
-        data[y][x] = 'stone';
-
-        // 🎯 Generar carbón solo dentro de la piedra
-        // entre capas 30 y 70 con baja probabilidad
-        if(y > 30 && y < 70 && Math.random() < 0.02){
-          generateCoalVein({data}, x, y);
-        }
-      }
-    }
-  }
-
-  chunks[chunkX] = {x: chunkX, data};
-  return chunks[chunkX];
-}
-
 
 
 const invBtn = document.getElementById('inventory-btn');
@@ -2051,6 +2103,7 @@ secretClose.addEventListener("click", () => {
 });
 const allItems = [
   { type: "grass", src: "Texturas/cesped_parte_costado.jpg" },
+  { type: "flower", src: "Texturas/flor_roja.png" },
   { type: "dirt", src: "Texturas/tierra.jpg" },
   { type: "coal_ore", src: "Texturas/carbon_bloque.png" },
   { type: "stone", src: "Texturas/piedra.jpg" },
@@ -2770,6 +2823,12 @@ function setBlockBg(wx, wy, type){
   let chunk = generateChunkBg(chunkX);
   if(chunk.data[wy]) chunk.data[wy][localX] = type;
 }
+// 🌑 Bloques que no se oscurecen en capa 2
+const noDarkBlocks = new Set(["leaf", "flower", "torch", "light_block"]);
+
+function isDarkEnabled(blockType) {
+  return !noDarkBlocks.has(blockType);
+}
 
 function drawChunks() {
   let startChunk = Math.floor((cameraX / BLOCK_SIZE) / CHUNK_SIZE) - 1;
@@ -2804,9 +2863,13 @@ if (type === 'leaf') {
         ctx.save();
 ctx.drawImage(tex, screenX, screenY, BLOCK_SIZE, BLOCK_SIZE);
 
-// oscurecer un poco con negro semitransparente
-ctx.fillStyle = "rgba(0, 0, 0, 0.3)"; // oscurece sin llegar a negro
-ctx.fillRect(screenX, screenY, BLOCK_SIZE, BLOCK_SIZE);
+// oscurecer un poco con negro semitransparente SOLO si aplica
+// oscurecer un poco con negro semitransparente SOLO si el bloque debe tener oscuridad
+if (isDarkEnabled(type)) {
+  ctx.fillStyle = "rgba(0, 0, 0, 0.3)";
+  ctx.fillRect(screenX, screenY, BLOCK_SIZE, BLOCK_SIZE);
+}
+
 
 ctx.restore();
 
@@ -3008,7 +3071,12 @@ let speed = crouching ? playerSpeed * 0.4 : playerSpeed;
 
 let cameraX=0, cameraY=0;
 
-function isBlock(wx, wy){ return getBlock(Math.floor(wx), Math.floor(wy)) !== null; }
+function isBlock(wx, wy){
+  const block = getBlock(Math.floor(wx), Math.floor(wy));
+  if (!block) return false;
+  return hasCollision(block); // solo colisiona si la regla lo permite
+}
+
 
 let collidingLeft=false, collidingRight=false, collidingTop=false, collidingBottom=false;
 function movePlayer() {
@@ -4116,6 +4184,46 @@ const blockData = {
   'coal_ore': {time:20}   // 👈 nuevo mineral
 };
 // Romper bloques
+// === SISTEMA SIMPLE DE DROPS ===
+// === SISTEMA SIMPLE DE DROPS CON CANTIDADES ===
+const simpleDrops = {
+  coal_ore: { item: 'coal', min: 1, max: 4 },
+  leaf:     { item: null }, // no suelta nada
+  chest:    { item: 'chest', min: 1, max: 1 },
+  crafting_table: { item: 'crafting_table', min: 1, max: 1 },
+  dirt:     { item: 'dirt', min: 1, max: 1 },
+  stone:    { item: 'stone', min: 1, max: 1 },
+  grass:    { item: 'grass', min: 1, max: 1 },
+  log:      { item: 'log', min: 1, max: 1 },
+  flower:      { item: 'flower', min: 1, max: 1 },
+  plank:    { item: 'plank', min: 1, max: 1 }
+};
+
+function dropBlockItem(blockType, wx, wy) {
+  if (!blockType) return;
+
+  // Obtener configuración de drop o usar por defecto
+  const info = simpleDrops[blockType] || { item: blockType, min: 1, max: 1 };
+  if (!info.item) return; // si no suelta nada
+
+  const drop = info.item;
+  const count = Math.floor(Math.random() * (info.max - info.min + 1)) + info.min;
+
+  const item = allItems.find(i => i.type === drop);
+  if (!item) {
+    console.warn("Sin textura para drop:", drop);
+    return;
+  }
+
+  // Añadir múltiples unidades al inventario
+  for (let i = 0; i < count; i++) {
+    addItemToInventory(drop, item.src);
+  }
+
+  // Debug opcional
+  console.log(`💧 Drop: ${drop} ×${count}`);
+}
+
 
 function handleBreaking(dt) {
   // si no está activo el modo romper o si el jugador se mueve → cancelar
@@ -4186,7 +4294,8 @@ else {
   }
 }
 
-function updateBreaking(dt){
+
+function updateBreaking(dt) {
   if (!breaking.active) return;
 
   // impedir romper mientras nos movemos (seguridad extra)
@@ -4213,13 +4322,15 @@ function updateBreaking(dt){
   breaking.progress = Math.min(breaking.time / maxTime, 1);
 
   if (breaking.progress >= 1) {
+    const blockType = breaking.type; // guardamos antes de eliminar
+
     // aplicar la rotura según la capa actual
     if (breaking.layer === 'front') {
       setBlock(breaking.wx, breaking.wy, null);
-      addItem(breaking.type);
+      dropBlockItem(blockType, breaking.wx, breaking.wy);
     } else if (breaking.layer === 'bg') {
       setBlockBg(breaking.wx, breaking.wy, null);
-      addItem(breaking.type);
+      dropBlockItem(blockType, breaking.wx, breaking.wy);
     }
 
     // si había cola para bg y acabamos de romper front => iniciar bg
@@ -4232,7 +4343,7 @@ function updateBreaking(dt){
         breaking.progress = 0;
         breaking.delay = 0;
         breaking.queueBg = false;
-        return; 
+        return;
       }
     }
 
@@ -4255,6 +4366,26 @@ function drawBreaking(){
     if(img.complete) ctx.drawImage(img, breaking.wx*BLOCK_SIZE-cameraX, breaking.wy*BLOCK_SIZE-cameraY, BLOCK_SIZE, BLOCK_SIZE);
   }
 }
+// === REGLAS DE COLISIÓN DE BLOQUES ===
+const collisionRules = {
+  grass: true,
+  dirt: true,
+  stone: true,
+  coal_ore: true,
+  log: true,
+  plank: true,
+  chest: true,
+  crafting_table: true,
+  leaf: false,
+  torch: false,
+  flower: false
+};
+
+// Devuelve si un tipo de bloque tiene colisión
+function hasCollision(type) {
+  return collisionRules[type] ?? true; // true por defecto
+}
+
 function addItem(type, amount = 1){
 const textureMap = {
   stone: 'Texturas/piedra.jpg',
