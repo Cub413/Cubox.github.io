@@ -1819,7 +1819,11 @@ const CHUNK_SIZE = 10;
 // Texturas
 const textures = {};
 textures.grass = new Image(); textures.grass.src = 'Texturas/cesped_parte_costado.jpg';
+textures.hierba = new Image(); textures.hierba.src = 'Texturas/hierba.png';
 textures.flower = new Image(); textures.flower.src = 'Texturas/flor_roja.png';
+textures.flowerL = new Image(); textures.flowerL.src = 'Texturas/flor_lila.png';
+textures.flowerA = new Image(); textures.flowerA.src = 'Texturas/flor_azul.png';
+textures.flowerN = new Image(); textures.flowerN.src = 'Texturas/flor_naranja.png';
 textures.dirt = new Image(); textures.dirt.src = 'Texturas/tierra.jpg';
 textures.coal_ore = new Image();
 textures.coal_ore.src = 'Texturas/carbon_bloque.png';
@@ -1866,9 +1870,49 @@ const specialBlocks = [
     onTopOf: "grass",
     minY: 30,
     maxY: 90,
-    chance: 0.15,
-    maxPerChunk: 10,
+    chance: 0.05,
+    maxPerChunk: 2,
     minPerChunk: 2,
+    layer: 1 // superficie
+  },
+  {
+    block: "flowerA",
+    onTopOf: "grass",
+    minY: 30,
+    maxY: 90,
+    chance: 0.05,
+    maxPerChunk: 3,
+    minPerChunk: 2,
+    layer: 1 // superficie
+  },
+  {
+  block: "flowerL",
+  onTopOf: "grass",
+  minY: 30,
+  maxY: 90,
+  chance: 0.05,
+  maxPerChunk: 3,
+  minPerChunk: 2,
+  layer: 1 // superficie
+},
+{
+  block: "flowerN",
+  onTopOf: "grass",
+  minY: 30,
+  maxY: 90,
+  chance: 0.05,
+  maxPerChunk: 1,
+  minPerChunk: 2,
+  layer: 1 // superficie
+},
+   {
+    block: "hierba",
+    onTopOf: "grass",
+    minY: 30,
+    maxY: 90,
+    chance: 0.25,
+    maxPerChunk: 10,
+    minPerChunk: 3,
     layer: 1 // superficie
   },
   {
@@ -2103,7 +2147,11 @@ secretClose.addEventListener("click", () => {
 });
 const allItems = [
   { type: "grass", src: "Texturas/cesped_parte_costado.jpg" },
+  { type: "hierba", src: "Texturas/hierba.png" },
   { type: "flower", src: "Texturas/flor_roja.png" },
+  { type: "flowerL", src: "Texturas/flor_lila.png" },
+  { type: "flowerA", src: "Texturas/flor_azul.png" },
+  { type: "flowerN", src: "Texturas/flor_naranja.png" },
   { type: "dirt", src: "Texturas/tierra.jpg" },
   { type: "coal_ore", src: "Texturas/carbon_bloque.png" },
   { type: "stone", src: "Texturas/piedra.jpg" },
@@ -2824,7 +2872,7 @@ function setBlockBg(wx, wy, type){
   if(chunk.data[wy]) chunk.data[wy][localX] = type;
 }
 // 🌑 Bloques que no se oscurecen en capa 2
-const noDarkBlocks = new Set(["leaf", "flower", "torch", "light_block"]);
+const noDarkBlocks = new Set(["leaf","hierba", "flower", "torch","flowerA","flowerL","flowerN", "light_block"]);
 
 function isDarkEnabled(blockType) {
   return !noDarkBlocks.has(blockType);
@@ -4176,6 +4224,11 @@ const blockData = {
   'stone': {time:30},
   'dirt': {time:5},
   'grass': {time:5},
+    'flower': {time:1},
+        'flowerA': {time:1},
+ 'flowerL': {time:1},      
+ 'flowerN': {time:1},
+     'hierba': {time:1},   
   'log': {time:15},
   'leaf': {time:0.5},
   'plank': {time:10},
@@ -4188,6 +4241,7 @@ const blockData = {
 // === SISTEMA SIMPLE DE DROPS CON CANTIDADES ===
 const simpleDrops = {
   coal_ore: { item: 'coal', min: 1, max: 4 },
+  hierba: { item: 'hierba', min: 0, max: 0 },
   leaf:     { item: null }, // no suelta nada
   chest:    { item: 'chest', min: 1, max: 1 },
   crafting_table: { item: 'crafting_table', min: 1, max: 1 },
@@ -4369,8 +4423,12 @@ function drawBreaking(){
 // === REGLAS DE COLISIÓN DE BLOQUES ===
 const collisionRules = {
   grass: true,
+  hierba: false,
   dirt: true,
   stone: true,
+  flowerL: false,
+  flowerA: false,
+  flowerN: false,
   coal_ore: true,
   log: true,
   plank: true,
