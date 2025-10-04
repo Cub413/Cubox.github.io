@@ -1093,18 +1093,22 @@ button:active {
   top:50%; left:50%;
   transform:translate(-50%,-50%);
   background:#1a1a1a;
-  border:3px solid #000;
-  border-radius:12px;
+  border:4px solid #000;
+  border-radius:16px;
   color:white;
   font-family:'Press Start 2P', monospace;
-  padding:16px;
+  padding:28px;
   z-index:4000;
-  width:90%;
-  max-width:500px;
+  width:95%;
+  max-width:800px;
   max-height:90%;
   display:flex;
   flex-direction:column;
+  justify-content:center;
+  align-items:center;
   overflow:hidden;
+  box-shadow:0 0 25px rgba(0,0,0,0.8);
+  text-align:center;
 ">
 
   <!-- Header fijo -->
@@ -1144,6 +1148,8 @@ button:active {
 ">
   <div id="recipes-list" style="display:none;"></div>
   <div id="recipe-grid" style="display:none; text-align:center;"></div>
+</div>
+
 </div>
 
   </div>
@@ -1546,6 +1552,7 @@ function showRecipeDetail(recipe, type) {
   backBtn.style.marginTop = "8px";
   backBtn.style.background = "#2ecc71";
   backBtn.style.border = "2px solid #000";
+  
   backBtn.style.fontFamily = "'Press Start 2P', monospace";
   backBtn.style.fontSize = "8px";
   backBtn.style.padding = "4px 8px";
@@ -1573,6 +1580,11 @@ const recipesData = {
       input: ["coal_ore", null, null, null],
       output: "coal"
     },
+        {
+      name: "plank",
+      input: ["log", null, null, null],
+      output: "plank"
+    },
     {
       name: "Crafting Table",
       input: ["plank","plank","plank","plank"],
@@ -1589,6 +1601,7 @@ const recipesData = {
   ],
   output: "wood_pickaxe"
 },
+
 {
   name: "stone_pickaxe",
   input: [
@@ -1597,6 +1610,31 @@ const recipesData = {
     null,    "stick",  null
   ],
   output: "stone_pickaxe"
+},
+
+
+ {
+  name: "wood_axe",
+  input: [
+    null, "plank", "plank",
+    null,    "stick",  "plank",
+    null,    "stick",  null
+  ],
+  output: "wood_axe"
+},   
+    {
+      name: "Stone Axe",
+      input: [null,"stone","stone", null,"stick","stone", null,"stick",null],
+      output: "stone_axe"
+    },
+    {
+  name: "crafting_table",
+  input: [
+    "plank", "plank", null,
+    "plank",    "plank",  null,
+    null,    null,  null
+  ],
+  output: "crafting_table"
 },
 {
   name: "chest",
@@ -1607,13 +1645,15 @@ const recipesData = {
   ],
   output: "chest"
 },
-
-    
-    {
-      name: "Stone Axe",
-      input: [null,"stone","stone", null,"stick","stone", null,"stick",null],
-      output: "stone_axe"
-    }
+{
+  name: "plank",
+  input: [
+  null, null, null,
+    null,    "log",  null,
+    null,    null,  null
+  ],
+  output: "plank"
+}
   ]
 };
 
@@ -1708,19 +1748,34 @@ function showRecipeDetail(recipe, type) {
   });
 
   const arrow = document.createElement("p");
-  arrow.textContent = "➡";
-  arrow.style.fontSize = "14px";
-  arrow.style.margin = "4px 0";
+arrow.textContent = "➡";
+arrow.style.fontSize = "18px";
+arrow.style.margin = "0 8px";
+arrow.style.display = "inline-block";
+arrow.style.transform = "translateY(-2px)"; // leve ajuste vertical
 
-  const result = document.createElement("img");
-  result.src = allItems.find(i => i.type === recipe.output)?.src || "";
-  result.style.width = "32px";
-  result.style.height = "32px";
-  result.style.imageRendering = "pixelated";
+const result = document.createElement("img");
+result.src = allItems.find(i => i.type === recipe.output)?.src || "";
+result.style.width = "32px";
+result.style.height = "32px";
+result.style.imageRendering = "pixelated";
+result.style.display = "inline-block";
 
-  recipeGrid.appendChild(grid);
-  recipeGrid.appendChild(arrow);
-  recipeGrid.appendChild(result);
+// 🔹 Contenedor horizontal centrado
+const resultContainer = document.createElement("div");
+resultContainer.style.display = "flex";
+resultContainer.style.alignItems = "center";
+resultContainer.style.justifyContent = "center";
+resultContainer.style.marginTop = "6px";
+resultContainer.style.gap = "8px";
+
+// Añadir elementos
+resultContainer.appendChild(arrow);
+resultContainer.appendChild(result);
+
+// 🔸 Insertar en el grid
+recipeGrid.appendChild(grid);
+recipeGrid.appendChild(resultContainer);
 
   const backBtn = document.createElement("button");
   backBtn.textContent = "← Volver";
