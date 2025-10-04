@@ -781,6 +781,7 @@ button:active {
   z-index: 5999;
   /* el panel tiene 6000 */
 }
+
 </style>
 </head>
 <body>
@@ -1076,6 +1077,80 @@ button:active {
     <button class="slot"></button>
     <button class="slot"></button>
   </div>
+  <!-- Botón de ayuda -->
+<button id="recipes-btn" style="
+  width: 32px; height: 32px;
+  font-size: 18px; font-weight: bold;
+  border: 2px solid #000;
+  background: #FFD700; color: #000;
+  border-radius: 6px; cursor: pointer;
+  image-rendering: pixelated;
+">?</button>
+
+<div id="recipes-panel" style="
+  display:none;
+  position:fixed;
+  top:50%; left:50%;
+  transform:translate(-50%,-50%);
+  background:#1a1a1a;
+  border:3px solid #000;
+  border-radius:12px;
+  color:white;
+  font-family:'Press Start 2P', monospace;
+  padding:16px;
+  z-index:4000;
+  width:90%;
+  max-width:500px;
+  max-height:90%;
+  display:flex;
+  flex-direction:column;
+  overflow:hidden;
+">
+
+  <!-- Header fijo -->
+  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+    <h3 style="font-size:14px;">📘 Recipes</h3>
+    <button id="close-recipes" style="
+      background:#e74c3c;
+      border:2px solid #000;
+      color:white;
+      font-family:'Press Start 2P', monospace;
+      font-size:12px;
+      padding:6px 12px;
+      cursor:pointer;
+    ">Cerrar</button>
+  </div>
+
+  <!-- Opciones de tipo -->
+  <div id="recipe-options" style="display:flex; justify-content:center; gap:10px; margin-bottom:10px;">
+    <button id="open-2x2" style="
+      background:#2ecc71; border:2px solid #000; cursor:pointer;
+      font-family:'Press Start 2P', monospace; font-size:12px;
+      padding:6px 12px;">2x2</button>
+    <button id="open-3x3" style="
+      background:#3498db; border:2px solid #000; cursor:pointer;
+      font-family:'Press Start 2P', monospace; font-size:12px;
+      padding:6px 12px;">3x3</button>
+  </div>
+
+  <!-- Contenido con scroll adaptativo -->
+<div id="recipes-scroll" style="
+  overflow-y:auto;
+  background:#111;
+  border:2px solid #000;
+  padding:2px;          /* padding mínimo */
+  border-radius:6px;
+  max-height:150px;     /* altura muy pequeña */
+">
+  <div id="recipes-list" style="display:none;"></div>
+  <div id="recipe-grid" style="display:none; text-align:center;"></div>
+</div>
+
+  </div>
+</div>
+
+
+
 </div>
 
 <!-- Hotbar fija abajo -->
@@ -1422,6 +1497,242 @@ fpsToggle.addEventListener("click", () => {
   fpsToggle.textContent = "mostrar fps: " + (fpsVisible ? "sí" : "no");
   fpsCounter.style.display = fpsVisible ? "block" : "none";
 });
+// === SISTEMA DE RECETAS ===
+const recipeScroll = document.getElementById("recipes-scroll");
+
+function showRecipeDetail(recipe, type) {
+  recipesList.style.display = "none";
+  recipeGrid.style.display = "block";
+  recipeGrid.innerHTML = "";
+
+  const grid = document.createElement("div");
+  const size = type === "2x2" ? 2 : 3;
+  grid.style.display = "grid";
+  grid.style.gridTemplateColumns = `repeat(${size}, minmax(28px, 1fr))`;
+  grid.style.gap = "4px";
+  grid.style.justifyContent = "center";
+  grid.style.margin = "0 auto";
+
+  recipe.input.forEach(item => {
+    const slot = document.createElement("div");
+    slot.style.width = "32px";
+    slot.style.height = "32px";
+    slot.style.border = "1px solid #000";
+    slot.style.background = "#333";
+    if (item) {
+      const img = document.createElement("img");
+      img.src = allItems.find(i => i.type === item)?.src || "";
+      img.style.width = "100%";
+      img.style.height = "100%";
+      img.style.imageRendering = "pixelated";
+      slot.appendChild(img);
+    }
+    grid.appendChild(slot);
+  });
+
+  const arrow = document.createElement("p");
+  arrow.textContent = "⬇";
+  arrow.style.fontSize = "14px";
+  arrow.style.margin = "6px 0";
+
+  const result = document.createElement("img");
+  result.src = allItems.find(i => i.type === recipe.output)?.src || "";
+  result.style.width = "32px";
+  result.style.height = "32px";
+  result.style.imageRendering = "pixelated";
+
+  const backBtn = document.createElement("button");
+  backBtn.textContent = "← Volver";
+  backBtn.style.marginTop = "8px";
+  backBtn.style.background = "#2ecc71";
+  backBtn.style.border = "2px solid #000";
+  backBtn.style.fontFamily = "'Press Start 2P', monospace";
+  backBtn.style.fontSize = "8px";
+  backBtn.style.padding = "4px 8px";
+  backBtn.onclick = () => showRecipes(type);
+
+  recipeGrid.appendChild(grid);
+  recipeGrid.appendChild(arrow);
+  recipeGrid.appendChild(result);
+  recipeGrid.appendChild(backBtn);
+
+  // 🔹 Auto-scroll al inicio (útil si venías de abajo)
+  recipeScroll.scrollTop = 0;
+}
+
+// 📜 Recetas base (puedes ampliarlas con tus reales)
+const recipesData = {
+  "2x2": [
+    {
+      name: "Stick",
+      input: ["plank", null, "plank", null],
+      output: "stick"
+    },
+    {
+      name: "coal",
+      input: ["coal_ore", null, null, null],
+      output: "coal"
+    },
+    {
+      name: "Crafting Table",
+      input: ["plank","plank","plank","plank"],
+      output: "crafting_table"
+    }
+  ],
+  "3x3": [
+{
+  name: "Wood Pickaxe",
+  input: [
+    "plank", "plank", "plank",
+    null,    "stick",  null,
+    null,    "stick",  null
+  ],
+  output: "wood_pickaxe"
+},
+{
+  name: "stone_pickaxe",
+  input: [
+    "stone", "stone", "stone",
+    null,    "stick",  null,
+    null,    "stick",  null
+  ],
+  output: "stone_pickaxe"
+},
+{
+  name: "chest",
+  input: [
+    "plank", "plank", "plank",
+    "plank",    null,  "plank",
+    "plank",    "plank",  "plank"
+  ],
+  output: "chest"
+},
+
+    
+    {
+      name: "Stone Axe",
+      input: [null,"stone","stone", null,"stick","stone", null,"stick",null],
+      output: "stone_axe"
+    }
+  ]
+};
+
+// --- Referencias ---
+const recipesBtn = document.getElementById("recipes-btn");
+const recipesPanel = document.getElementById("recipes-panel");
+const closeRecipes = document.getElementById("close-recipes");
+const recipesList = document.getElementById("recipes-list");
+const recipeGrid = document.getElementById("recipe-grid");
+const open2x2 = document.getElementById("open-2x2");
+const open3x3 = document.getElementById("open-3x3");
+window.addEventListener("load", () => {
+  const closeBtn = document.getElementById("close-recipes");
+  if (closeBtn) closeBtn.click(); // 🔹 Simula el click al iniciar
+});
+
+// Abrir / cerrar panel
+recipesBtn.onclick = () => {
+  recipesPanel.style.display = "block";
+  recipesList.style.display = "none";
+  recipeGrid.style.display = "none";
+};
+
+closeRecipes.onclick = () => {
+  recipesPanel.style.display = "none";
+};
+
+// Mostrar lista 2x2 o 3x3
+open2x2.onclick = () => showRecipes("2x2");
+open3x3.onclick = () => showRecipes("3x3");
+
+function showRecipes(type) {
+  recipesList.style.display = "block";
+  recipeGrid.style.display = "none";
+  recipesList.innerHTML = "";
+
+  recipesData[type].forEach(recipe => {
+    const btn = document.createElement("div");
+    btn.style.display = "flex";
+    btn.style.alignItems = "center";
+    btn.style.gap = "8px";
+    btn.style.marginBottom = "6px";
+    btn.style.padding = "4px";
+    btn.style.background = "#222";
+    btn.style.border = "2px solid #000";
+    btn.style.cursor = "pointer";
+    btn.style.fontSize = "8px";
+
+    const img = document.createElement("img");
+    img.src = allItems.find(i => i.type === recipe.output)?.src || "";
+    img.style.width = "24px";
+    img.style.height = "24px";
+    img.style.imageRendering = "pixelated";
+
+    btn.appendChild(img);
+    btn.appendChild(document.createTextNode(recipe.name));
+    btn.onclick = () => showRecipeDetail(recipe, type);
+
+    recipesList.appendChild(btn);
+  });
+}
+
+// Mostrar grid de receta seleccionada
+function showRecipeDetail(recipe, type) {
+  recipesList.style.display = "none";
+  recipeGrid.style.display = "block";
+  recipeGrid.innerHTML = "";
+
+  const grid = document.createElement("div");
+  const size = type === "2x2" ? 2 : 3;
+  grid.style.display = "grid";
+  grid.style.gridTemplateColumns = `repeat(${size}, 32px)`;
+  grid.style.gap = "4px";
+  grid.style.margin = "0 auto";
+  grid.style.justifyContent = "center";
+
+  recipe.input.forEach(item => {
+    const slot = document.createElement("div");
+    slot.style.width = "32px";
+    slot.style.height = "32px";
+    slot.style.border = "1px solid #000";
+    slot.style.background = "#333";
+    if (item) {
+      const img = document.createElement("img");
+      img.src = allItems.find(i => i.type === item)?.src || "";
+      img.style.width = "100%";
+      img.style.height = "100%";
+      img.style.imageRendering = "pixelated";
+      slot.appendChild(img);
+    }
+    grid.appendChild(slot);
+  });
+
+  const arrow = document.createElement("p");
+  arrow.textContent = "➡";
+  arrow.style.fontSize = "14px";
+  arrow.style.margin = "4px 0";
+
+  const result = document.createElement("img");
+  result.src = allItems.find(i => i.type === recipe.output)?.src || "";
+  result.style.width = "32px";
+  result.style.height = "32px";
+  result.style.imageRendering = "pixelated";
+
+  recipeGrid.appendChild(grid);
+  recipeGrid.appendChild(arrow);
+  recipeGrid.appendChild(result);
+
+  const backBtn = document.createElement("button");
+  backBtn.textContent = "← Volver";
+  backBtn.style.marginTop = "8px";
+  backBtn.style.background = "#2ecc71";
+  backBtn.style.border = "2px solid #000";
+  backBtn.style.fontFamily = "'Press Start 2P', monospace";
+  backBtn.style.fontSize = "8px";
+  backBtn.style.padding = "4px 8px";
+  backBtn.onclick = () => showRecipes(type);
+  recipeGrid.appendChild(backBtn);
+}
 
 // Loop para calcular fps por frame
 function frameLoop() {
@@ -4263,9 +4574,7 @@ let speed = crouching ? playerSpeed * 0.4 : playerSpeed;
 player.vx = 0;
 if (leftPressed) player.vx = -speed;
 if (rightPressed) player.vx = speed;
-if (particlesEnabled) {
-  updateParticles(ctx);
-}
+
 
 if (jumpPressed && player.onGround) player.vy = jumpPower;
 
@@ -4280,7 +4589,9 @@ playWalkSound();
 
   drawChunks();
   drawBreaking();
-
+if (particlesEnabled) {
+  updateParticles(ctx);
+}
   drawPlayer(dt);
 
   requestAnimationFrame(gameLoop);
