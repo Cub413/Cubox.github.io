@@ -2590,41 +2590,178 @@ function enableTouchInventory() {
   });
 }
 // === SISTEMA DE PARTÍCULAS ===
+// --- Sistema de clima dinámico ---
 let particlesEnabled = true;
 let particles = [];
 
+let weatherMode = "normal";
+let windDirection = 1; // 1 = derecha, -1 = izquierda
+let windStrength = 0.02; // fuerza base del viento
+let nextWindChange = 0;
+let windSound = null;
+
+const weatherModes = ["none", "breeze", "normal", "windy", "storm"];
+
+// 🔊 Cargar sonido del viento
+windSound = new Audio("Texturas/viento.mp3");
+windSound.loop = true;
+windSound.volume = 0;
+
+// 🌦️ Establecer clima
+function setWeather(mode) {
+  weatherMode = mode;
+
+  console.log("🌤️ Nuevo clima:", mode);
+
+  // ajustar fuerza objetivo según clima (nunca apagar el viento)
+  switch (mode) {
+    case "none":
+      windStrength = 0.005;
+      break;
+    case "breeze":
+      windStrength = 0.01;
+      break;
+    case "normal":
+      windStrength = 0.03;
+      break;
+    case "windy":
+      windStrength = 0.04;
+      break;
+    case "storm":
+      windStrength = 0.03;
+      break;
+  }
+
+  scheduleWindChange();
+  updateWindSound();
+}
+
+// 💨 Cambio de dirección del viento cada 3–6 minutos
+function scheduleWindChange() {
+  const delay = 180000 + Math.random() * 180000; // 3–6 min
+  nextWindChange = performance.now() + delay;
+}
+
+// 💨 Actualización constante del viento
+function updateWind() {
+  const now = performance.now();
+
+  // cambia dirección aleatoriamente cada cierto tiempo
+  if (now >= nextWindChange) {
+    windDirection = Math.random() < 0.5 ? -1 : 1;
+    scheduleWindChange();
+    console.log("💨 Cambio de dirección:", windDirection > 0 ? "➡ derecha" : "⬅ izquierda");
+  }
+
+  // ajusta suavemente la fuerza del viento según el clima
+  const target =
+    weatherMode === "none" ? 0 :
+    weatherMode === "breeze" ? 0.07 :
+    weatherMode === "normal" ? 0.05 :
+    weatherMode === "windy" ? 0.05 :
+    weatherMode === "storm" ? 0.10 :
+
+  windStrength += (target - windStrength) * 0.01;
+
+  updateWindSound();
+}
+
+// 🔊 Sonido del viento
+function updateWindSound() {
+  if (!windSound) return;
+
+  const targetVol = Math.min(1, windStrength * 8);
+  fadeVolume(windSound, targetVol, 1000);
+
+  if (windSound.paused) {
+    windSound.play().catch(() => {});
+  }
+}
+
+// 🔈 Transición suave de volumen
+function fadeVolume(audio, target, duration, onComplete) {
+  const start = audio.volume;
+  const delta = target - start;
+  const steps = 30;
+  let current = 0;
+
+  clearInterval(audio._fade);
+  audio._fade = setInterval(() => {
+    current++;
+    audio.volume = start + (delta * current) / steps;
+    if (current >= steps) {
+      clearInterval(audio._fade);
+      audio.volume = target;
+      if (onComplete) onComplete();
+    }
+  }, duration / steps);
+}
+
+// 🌦️ Cambio automático de clima cada 1–5 minutos
+function scheduleNextWeather() {
+  const nextChange = 60000 * (1 + Math.random() * 4);
+  setTimeout(() => {
+    const randomWeather = weatherModes[Math.floor(Math.random() * weatherModes.length)];
+    setWeather(randomWeather);
+    scheduleNextWeather();
+  }, nextChange);
+}
+
+// 🔄 Inicializar clima y viento
+(function initWeather() {
+  const randomWeather = weatherModes[Math.floor(Math.random() * weatherModes.length)];
+  setWeather(randomWeather);
+  scheduleNextWeather();
+})();
+
+// --- partículas idénticas al sistema anterior ---
+// 🌿 Clase de partículas (hojas)
 class Particle {
   constructor(wx, wy, texture, life = 200) {
-    this.wx = wx + 0.5;  
-    this.wy = wy + 0.5;  
+    this.wx = wx + (Math.random() - 0.5);
+    this.wy = wy + Math.random() * 0.5;
 
-    // velocidad de caída (vertical)
-    this.vy = Math.random() * 0.02 + 0.01;
+    // 💨 arrastre inicial según viento actual
+    const baseForce = 3 + Math.random() * 2;
+    this.vx = windDirection * windStrength * baseForce;
+    this.vy = 0.015 + Math.random() * 0.015; // caída leve, nunca se eleva
 
-    // parámetros para el balanceo lateral
-    this.swingAmplitude = 0.3; // qué tanto se mueve de lado a lado (en bloques)
-    this.swingSpeed = 0.05 + Math.random() * 0.05; // velocidad del vaivén
-    this.phase = Math.random() * Math.PI * 2; // desfase inicial
+    this.swingSpeed = 0.03 + Math.random() * 0.04;
+    this.phase = Math.random() * Math.PI * 2;
+
+    this.size = BLOCK_SIZE * (0.12 + Math.random() * 0.08);
+    this.rotation = Math.random() * Math.PI * 2;
+    this.rotationSpeed = (Math.random() - 0.5) * 0.05;
 
     this.life = life;
-    this.size = BLOCK_SIZE * 0.15;
-    this.texture = texture;
+    this.maxLife = life;
     this.alpha = 1;
-    this.time = 0; // contador de frames
+    this.texture = texture;
+    this.time = 0;
   }
 
   update() {
     this.time++;
 
-    // Movimiento lateral oscilatorio (seno)
-    this.wx += Math.sin(this.time * this.swingSpeed + this.phase) * 0.02;
+    // 💨 siempre viento activo
+    this.vx += windDirection * windStrength * 0.2;
+    this.vx += Math.sin(this.time * this.swingSpeed + this.phase) * 0.0015;
 
-    // Caída vertical
+    // ligera caída (sin elevación)
+    const gravity = 0.0003;
+    this.vy += gravity;
+
+    // rozamiento
+    this.vx *= 0.985;
+    this.vy *= 0.992;
+
+    this.wx += this.vx;
     this.wy += this.vy;
+    this.rotation += this.rotationSpeed;
 
-    // Vida y transparencia
     this.life--;
-    this.alpha = this.life / 200;
+    const t = this.life / this.maxLife;
+    this.alpha = Math.min(1, t * 1.5);
   }
 
   draw(ctx) {
@@ -2637,45 +2774,51 @@ class Particle {
 
     ctx.save();
     ctx.globalAlpha = this.alpha;
-    ctx.drawImage(this.texture, px, py, this.size, this.size);
-    ctx.restore();
-  }
-
-
-  draw(ctx) {
-    if (!this.texture.complete) return;
-
-    // convertir coordenadas de mundo a pantalla
-    const px = this.wx * BLOCK_SIZE - cameraX;
-    const py = this.wy * BLOCK_SIZE - cameraY;
-
-    // dibujar solo si están en pantalla
-    if (
-      px + this.size < 0 || px > width ||
-      py + this.size < 0 || py > height
-    ) return;
-
-    ctx.save();
-    ctx.globalAlpha = this.alpha;
-    ctx.drawImage(this.texture, px, py, this.size, this.size);
+    ctx.translate(px + this.size / 2, py + this.size / 2);
+    ctx.rotate(this.rotation);
+    ctx.drawImage(this.texture, -this.size / 2, -this.size / 2, this.size, this.size);
     ctx.restore();
   }
 }
 
+ 
 function spawnLeafParticles(wx, wy) {
   if (!particlesEnabled) return;
-  // 1 o 2 hojitas máximo por frame
-  particles.push(new Particle(wx, wy, textures.particle_leaf, 200));
+  let count = 1 + Math.floor(Math.random() * 3);
+
+  // más hojas según clima
+  if (weatherMode === "breeze") count += 1;
+  if (weatherMode === "normal") count += 2;
+  if (weatherMode === "windy") count += 4;
+  if (weatherMode === "storm") count += 6;
+
+  for (let i = 0; i < count; i++) {
+    const leaf = new Particle(wx, wy, textures.particle_leaf, 200 + Math.random() * 100);
+
+    // 💨 velocidad inicial adicional según clima
+    if (weatherMode === "windy") {
+      leaf.vx *= 1.5;
+      leaf.vy *= 1.2;
+    } else if (weatherMode === "storm") {
+      leaf.vx *= 1.5;
+      leaf.vy *= 1.2;
+      leaf.rotationSpeed *= 2;
+    }
+
+    particles.push(leaf);
+  }
 }
 
 function updateParticles(ctx) {
+  updateWind();
   for (let i = particles.length - 1; i >= 0; i--) {
-    let p = particles[i];
+    const p = particles[i];
     p.update();
     p.draw(ctx);
     if (p.life <= 0) particles.splice(i, 1);
   }
 }
+
 
 const buttons = ['left', 'right', 'jump', 'down', 'inventory-btn'];
 // Romper
@@ -2700,6 +2843,49 @@ let playerFrames = [];
 let jumpFrames = [];
 let crouchFrames = [];
 let breakFrames = [];
+// --- Parpadeo automático exacto según sprite activo ---
+let lastActivityTime = Date.now();
+let blinking = false;
+
+// detectar actividad táctil o teclado
+window.addEventListener("touchstart", () => (lastActivityTime = Date.now()));
+window.addEventListener("keydown", () => (lastActivityTime = Date.now()));
+
+// función para obtener el nombre base del personaje actual
+function getCharacterName() {
+  const src = playerFrames[0]?.src || "";
+  if (src.includes("Merry")) return "Merry";
+  if (src.includes("Cubs")) return "Cubs";
+  return "Cubs"; // por defecto
+}
+
+// función de parpadeo
+function blinkCharacter() {
+  if (blinking) return;
+  blinking = true;
+
+  const charName = getCharacterName();
+
+  const normalFrame = new Image();
+  const closedEyes = new Image();
+
+  normalFrame.src = `Texturas/${charName}1.png`;
+  closedEyes.src = `Texturas/${charName}_ojoscerrados.png`;
+
+  playerFrames[0] = closedEyes;
+
+  setTimeout(() => {
+    playerFrames[0] = normalFrame;
+    blinking = false;
+  }, 200);
+}
+
+// revisar inactividad cada 5 segundos
+setInterval(() => {
+  if (Date.now() - lastActivityTime > 5000) {
+    blinkCharacter();
+  }
+}, 5000);
 
 // Función para cargar frames con promesas
 function loadFrames(path, start = 1, end = 1) {
@@ -4242,7 +4428,7 @@ const blockData = {
 const simpleDrops = {
   coal_ore: { item: 'coal', min: 1, max: 4 },
   hierba: { item: 'hierba', min: 0, max: 0 },
-  leaf:     { item: null }, // no suelta nada
+  leaf: { item: 'leaf', min: 0, max: 1 }, // no suelta nada
   chest:    { item: 'chest', min: 1, max: 1 },
   crafting_table: { item: 'crafting_table', min: 1, max: 1 },
   dirt:     { item: 'dirt', min: 1, max: 1 },
