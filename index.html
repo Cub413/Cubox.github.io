@@ -951,7 +951,7 @@ button:active {
 <h3>volumen de musica</h3>
 <div id="volume-controls">
   <button id="vol-down">-</button>
-  <span id="vol-label">50</span>
+  <span id="vol-label">0</span>
   <button id="vol-up">+</button>
 </div>
 <p>musica:</p>
@@ -1467,16 +1467,18 @@ const volUp   = document.getElementById("vol-up");
 const volLabel = document.getElementById("vol-label");
 
 // volumen inicial (cargar desde localStorage o usar 0.5 por defecto)
-let volume = parseFloat(localStorage.getItem("musicVolume")) || 0.5;
-player413.volume = volume;
-volLabel.textContent = Math.round(volume * 100);
+let savedVolume = parseFloat(localStorage.getItem("musicVolume"));
+// 🔇 volumen inicial siempre 0, sin guardar nada
+let volume = 0;
+player413.volume = 0;
+volLabel.textContent = 0;
 
-// actualizar volumen en pantalla y guardar
+// actualizar volumen solo en pantalla (sin localStorage)
 function updateVolume() {
   player413.volume = volume;
   volLabel.textContent = Math.round(volume * 100);
-  localStorage.setItem("musicVolume", volume.toFixed(2));
 }
+
 
 // bajar volumen
 volDown.addEventListener("click", () => {
@@ -1820,6 +1822,8 @@ const CHUNK_SIZE = 10;
 const textures = {};
 textures.grass = new Image(); textures.grass.src = 'Texturas/cesped_parte_costado.jpg';
 textures.hierba = new Image(); textures.hierba.src = 'Texturas/hierba.png';
+textures.iron_ore = new Image(); textures.iron_ore.src = 'Texturas/iron_ore.png';
+textures.iron = new Image(); textures.iron.src = 'Texturas/iron.png';
 textures.flower = new Image(); textures.flower.src = 'Texturas/flor_rojap.png';
 textures.flowerL = new Image(); textures.flowerL.src = 'Texturas/flor_lilap.png';
 textures.flowerA = new Image(); textures.flowerA.src = 'Texturas/flor_azulp.png';
@@ -1915,6 +1919,16 @@ const specialBlocks = [
     minPerChunk: 3,
     layer: 1 // superficie
   },
+   {
+    block: "iron_ore",
+    onTopOf: "stone",
+    minY: 30,
+    maxY: 90,
+    chance: 0.25,
+    maxPerChunk: 10,
+    minPerChunk: 3,
+    layer: 0 // superficie
+  },
   {
     block: "coal_ore",
     onTopOf: "stone",
@@ -1924,17 +1938,8 @@ const specialBlocks = [
     maxPerChunk: 3,
     minPerChunk: 1,
     layer: 0 // subterránea
-  },
-  {
-    block: "diamond_ore",
-    onTopOf: "stone",
-    minY: 75,
-    maxY: 95,
-    chance: 0.01,
-    maxPerChunk: 2,
-    minPerChunk: 0,
-    layer: 0
   }
+
 ];
 
 function generateSpecialBlocksInChunk(chunkX, layer = 1) {
@@ -2153,6 +2158,8 @@ const allItems = [
   { type: "flowerA", src: "Texturas/flor_azul.png" },
   { type: "flowerN", src: "Texturas/flor_naranja.png" },
   { type: "dirt", src: "Texturas/tierra.jpg" },
+  { type: "iron_ore", src: "Texturas/iron_ore.png" },
+   { type: "iron", src: "Texturas/iron.png" },
   { type: "coal_ore", src: "Texturas/carbon_bloque.png" },
   { type: "stone", src: "Texturas/piedra.jpg" },
   { type: "log", src: "Texturas/tronco.png" },
@@ -2595,7 +2602,24 @@ let particlesEnabled = true;
 let particles = [];
 
 let weatherMode = "normal";
-let windDirection = 1; // 1 = derecha, -1 = izquierda
+// Inicialización aleatoria
+let windDirection = Math.random() < 0.5 ? -1 : 1;
+
+// Función para cambiar viento
+function changeWindDirection() {
+    // Cambia al contrario
+    windDirection *= -1;
+    console.log("Nuevo viento:", windDirection === 1 ? "derecha" : "izquierda");
+
+    // Próximo cambio aleatorio entre 1 y 5 minutos
+    const nextChange = 60_000 + Math.random() * 4 * 60_000; // ms
+    setTimeout(changeWindDirection, nextChange);
+}
+
+// Primer cambio
+const firstChange = 60_000 + Math.random() * 4 * 60_000;
+setTimeout(changeWindDirection, firstChange);
+
 let windStrength = 0.02; // fuerza base del viento
 let nextWindChange = 0;
 let windSound = null;
@@ -2866,11 +2890,10 @@ function blinkCharacter() {
 
   const charName = getCharacterName();
 
-  const normalFrame = new Image();
+  const normalFrame = playerFrames[0]; // mantenemos el frame original
   const closedEyes = new Image();
-
-  normalFrame.src = `Texturas/${charName}1.png`;
   closedEyes.src = `Texturas/${charName}_ojoscerrados.png`;
+  closedEyes.name = normalFrame.name; // 🔑 importante: conservar el name para offsets
 
   playerFrames[0] = closedEyes;
 
@@ -4408,6 +4431,8 @@ let breaking = {
 // Datos de bloques
 const blockData = {
   'stone': {time:30},
+    'iron_ore': {time:30},
+     'gold_ore': {time:30},
   'dirt': {time:5},
   'grass': {time:5},
     'flower': {time:1},
@@ -4419,7 +4444,7 @@ const blockData = {
   'leaf': {time:0.5},
   'plank': {time:10},
    'chest': {time:10},
-  'crafting_table': {time:20},
+  'crafting_table': {time:10},
   'coal_ore': {time:20}   // 👈 nuevo mineral
 };
 // Romper bloques
@@ -4436,6 +4461,7 @@ const simpleDrops = {
   grass:    { item: 'grass', min: 1, max: 1 },
   log:      { item: 'log', min: 1, max: 1 },
   flower:      { item: 'flower', min: 1, max: 1 },
+  iron_ore:      { item: 'iron', min: 1, max: 1 },
   plank:    { item: 'plank', min: 1, max: 1 }
 };
 
@@ -4535,10 +4561,22 @@ else {
 }
 
 
+// 🔊 sonido continuo de rotura
+const breakSound = new Audio('texturas/romper.mp3'); // <-- reemplazá por tu ruta real
+breakSound.volume = 0.4;
+
+// 🔁 cuando termina, vuelve a empezar si seguimos rompiendo
+breakSound.addEventListener('ended', () => {
+  if (breaking.active) {
+    breakSound.currentTime = 0;
+    breakSound.play();
+  }
+});
+
 function updateBreaking(dt) {
   if (!breaking.active) return;
 
-  // impedir romper mientras nos movemos (seguridad extra)
+  // impedir romper mientras nos movemos
   if (leftPressed || rightPressed || jumpPressed) {
     breakMode = false;
     priBtn.classList.remove('active');
@@ -4546,25 +4584,27 @@ function updateBreaking(dt) {
     return;
   }
 
-  // tiempo base según tipo
+  // 🔊 iniciar el sonido si no está sonando
+  if (breakSound.paused) {
+    breakSound.currentTime = 0;
+    breakSound.play();
+  }
+
+  // tiempo base
   let maxTime = blockData[breaking.type]?.time || 5;
 
-  // herramienta reduce tiempo
   const slot = inventory[selectedSlot];
-  if (slot && tools[slot.type]) {
-    const tool = tools[slot.type];
-    if (tool.fastBlocks.includes(breaking.type)) {
-      maxTime *= tool.speed;
-    }
+  const tool = slot ? tools[slot.type] : null;
+  if (tool?.fastBlocks?.includes(breaking.type)) {
+    maxTime *= tool.speed;
   }
 
   breaking.time += dt;
   breaking.progress = Math.min(breaking.time / maxTime, 1);
 
   if (breaking.progress >= 1) {
-    const blockType = breaking.type; // guardamos antes de eliminar
+    const blockType = breaking.type;
 
-    // aplicar la rotura según la capa actual
     if (breaking.layer === 'front') {
       setBlock(breaking.wx, breaking.wy, null);
       dropBlockItem(blockType, breaking.wx, breaking.wy);
@@ -4573,7 +4613,7 @@ function updateBreaking(dt) {
       dropBlockItem(blockType, breaking.wx, breaking.wy);
     }
 
-    // si había cola para bg y acabamos de romper front => iniciar bg
+    // si hay fondo para romper después
     if (breaking.layer === 'front' && breaking.queueBg) {
       const bgType = getBlockBg(breaking.wx, breaking.wy);
       if (bgType) {
@@ -4587,17 +4627,27 @@ function updateBreaking(dt) {
       }
     }
 
-    // si no hay más que romper, detener
     stopBreaking();
   }
 }
 
-function stopBreaking(){
+// 🔇 función original + detener sonido
+function stopBreaking() {
   breaking.active = false;
-  breaking.wx = 0; breaking.wy = 0; breaking.type = null;
-  breaking.time = 0; breaking.progress = 0; breaking.delay = 0;
-  breaking.layer = null; breaking.queueBg = false;
+  breaking.wx = 0;
+  breaking.wy = 0;
+  breaking.type = null;
+  breaking.time = 0;
+  breaking.progress = 0;
+  breaking.delay = 0;
+  breaking.layer = null;
+  breaking.queueBg = false;
+
+  // 🔇 detener sonido al soltar o terminar
+  breakSound.pause();
+  breakSound.currentTime = 0;
 }
+
 
 function drawBreaking(){
   if(breaking.active && breaking.type){
@@ -4638,6 +4688,7 @@ const textureMap = {
   leaf: 'Texturas/oja.png',
   log:  'Texturas/tronco.png',
   plank: 'Texturas/tablon.png',
+  iron_ore: 'Texturas/iron_ore.png',
   crafting_table: 'Texturas/mesa_de_crafteo.png',
   chest: 'Texturas/cofre.png',
   coal_ore: 'Texturas/carbon_bloque.png'  // 👈 añadido
@@ -4733,7 +4784,7 @@ canvas.addEventListener('touchstart', e=>{
 
 //check 1//
 const nonPlaceable = [
-  'stick','coal',
+  'stick','coal','iron',
   'wood_pickaxe', 'stone_pickaxe',
   'wood_axe', 'stone_axe'
 ];
