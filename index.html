@@ -785,6 +785,8 @@ button:active {
 </style>
 </head>
 <body>
+
+
   <div id="chest-blur"></div>
   <!-- Panel Cofre -->
 <div id="cofre-panel" style="
@@ -1367,64 +1369,17 @@ setInterval(() => {
 
 
 window.addEventListener("load", () => {
-  const starmp3 = document.getElementById("starmp3");
-  const player413 = document.getElementById("player413");
   const overlay413 = document.getElementById("overlay413");
-  const currentTrackElem = document.getElementById("currentTrack");
-  const prevTrackBtn = document.getElementById("prevTrack");
-  const nextTrackBtn = document.getElementById("nextTrack");
-const particlesToggle = document.getElementById("particles-toggle");
-particlesToggle.addEventListener("click", () => {
-  particlesEnabled = !particlesEnabled;
-  particlesToggle.textContent = "partículas: " + (particlesEnabled ? "sí" : "no");
-});
+  const particlesToggle = document.getElementById("particles-toggle");
+  const starmp3 = document.getElementById("starmp3");
 
-  const tracks413 = [
-    "Texturas/Explorer.mp3",
-    "Texturas/far.mp3",
-    "Texturas/RLX.mp3",
-    "Texturas/RLX.mp3",
-    "Texturas/Night.mp3"
-  ];
+  // 🔹 Botón para alternar partículas
+  particlesToggle.addEventListener("click", () => {
+    particlesEnabled = !particlesEnabled;
+    particlesToggle.textContent = "partículas: " + (particlesEnabled ? "sí" : "no");
+  });
 
-  let playlist413 = [];
-  let playedTracks = [];
-  let currentTrack = "";
-
-  function shufflePlaylist() {
-    playlist413 = [...tracks413];
-    playedTracks = [];
-    pickNextTrack();
-  }
-
-  function pickNextTrack() {
-    if (playlist413.length === 0) {
-      playlist413 = [...playedTracks];
-      playedTracks = [];
-    }
-    const randomIndex = Math.floor(Math.random() * playlist413.length);
-    currentTrack = playlist413.splice(randomIndex, 1)[0];
-    playedTracks.push(currentTrack);
-    updateCurrentTrackDisplay();
-    player413.src = currentTrack;
-    player413.play().catch(err => console.error(err));
-  }
-
-  function pickPrevTrack() {
-    if (playedTracks.length > 1) {
-      playlist413.unshift(playedTracks.pop());
-      currentTrack = playedTracks[playedTracks.length - 1];
-      updateCurrentTrackDisplay();
-      player413.src = currentTrack;
-      player413.play().catch(err => console.error(err));
-    }
-  }
-
-  function updateCurrentTrackDisplay() {
-    const name = currentTrack.split("/").pop();
-    currentTrackElem.textContent = `<${name}>`;
-  }
-
+  // 🔹 Función para activar pantalla completa
   function openFullscreen() {
     if (document.documentElement.requestFullscreen) {
       document.documentElement.requestFullscreen();
@@ -1435,62 +1390,13 @@ particlesToggle.addEventListener("click", () => {
     }
   }
 
-  starmp3.addEventListener("click", async () => {
-    try {
-      openFullscreen();
-      shufflePlaylist();
-      overlay413.style.display = "none";
-      player413.muted = false;
-      player413.volume = (window.orientation === 90 || window.orientation === -90) ? 1 : 0;
-      await player413.play();
-    } catch(e) {
-      console.error("Error al reproducir audio:", e);
-    }
+  // 🔹 Al hacer clic en el botón principal
+  starmp3.addEventListener("click", () => {
+    openFullscreen();
+    overlay413.style.display = "none";
   });
-
-  window.addEventListener("orientationchange", () => {
-    if (player413.src) {
-      player413.volume = (window.orientation === 90 || window.orientation === -90) ? 1 : 0;
-    }
-  });
-
-  prevTrackBtn.addEventListener("click", pickPrevTrack);
-  nextTrackBtn.addEventListener("click", pickNextTrack);
-
-  // --- aquí se reproduce la siguiente automáticamente ---
-  player413.addEventListener("ended", pickNextTrack);
 });
 
-// --- controles de volumen ---
-const volDown = document.getElementById("vol-down");
-const volUp   = document.getElementById("vol-up");
-const volLabel = document.getElementById("vol-label");
-
-// volumen inicial (cargar desde localStorage o usar 0.5 por defecto)
-let savedVolume = parseFloat(localStorage.getItem("musicVolume"));
-// 🔇 volumen inicial siempre 0, sin guardar nada
-let volume = 0;
-player413.volume = 0;
-volLabel.textContent = 0;
-
-// actualizar volumen solo en pantalla (sin localStorage)
-function updateVolume() {
-  player413.volume = volume;
-  volLabel.textContent = Math.round(volume * 100);
-}
-
-
-// bajar volumen
-volDown.addEventListener("click", () => {
-  volume = Math.max(0, volume - 0.1);
-  updateVolume();
-});
-
-// subir volumen
-volUp.addEventListener("click", () => {
-  volume = Math.min(1, volume + 0.1);
-  updateVolume();
-});
 
 let fpsVisible = false;
 let fpsCounter = document.getElementById("fps-counter");
@@ -1985,34 +1891,32 @@ function generateSpecialBlocksInChunk(chunkX, layer = 1) {
 function generateChunk(chunkX) {
   if (chunks[chunkX]) return chunks[chunkX];
 
-  let surfaceHeight = ROWS - 50;
-  let currentHeight = surfaceHeight;
-  let data = [];
+  const data = [];
+  const baseHeight = ROWS - 45; // altura base (suelo general)
+  const maxVariation = 1;       // máximo de 3-4 bloques de diferencia total
+  let lastHeight = baseHeight;  // recordamos la altura anterior para suavizar
 
   for (let x = 0; x < CHUNK_SIZE; x++) {
-    let worldX = chunkX * CHUNK_SIZE + x;
-    let change = Math.floor(Math.random() * 3) - 1;
-    currentHeight += change;
-
-    if (currentHeight < surfaceHeight - 5) currentHeight = surfaceHeight - 5;
-    if (currentHeight > surfaceHeight + 2) currentHeight = surfaceHeight + 2;
+    // pequeña variación controlada
+    const change = Math.floor(Math.random() * 3) - 1; // -1, 0 o +1
+    lastHeight = Math.max(baseHeight - maxVariation, Math.min(baseHeight + maxVariation, lastHeight + change));
+    const surfaceY = lastHeight;
 
     for (let y = 0; y < ROWS; y++) {
       if (!data[y]) data[y] = [];
 
-      if (y < currentHeight) {
-        data[y][x] = null;
-      }
-      else if (y === currentHeight) {
-        data[y][x] = 'grass';
-      }
-      else if (y < currentHeight + 3) {
-        data[y][x] = 'dirt';
-      }
+      if (y < surfaceY) {
+        data[y][x] = null; // aire
+      } 
+      else if (y === surfaceY) {
+        data[y][x] = "grass"; // superficie
+      } 
+      else if (y <= surfaceY + 2) {
+        data[y][x] = "dirt"; // capa de tierra
+      } 
       else {
-        data[y][x] = 'stone';
-
-        // 🎯 Generar carbón solo dentro de la piedra
+        data[y][x] = "stone"; // roca profunda
+        // 🎯 carbón dentro de la piedra
         if (y > 30 && y < 70 && Math.random() < 0.02) {
           generateCoalVein({ data }, x, y);
         }
@@ -2020,43 +1924,29 @@ function generateChunk(chunkX) {
     }
   }
 
-  // Guardar en ambos sistemas
   chunks[chunkX] = { x: chunkX, data };
-  Worlddata[chunkX] = data; // 👈 sincronizado
-generateSpecialBlocksInChunk(chunkX, 1); // genera solo los bloques con layer 1
+  Worlddata[chunkX] = data;
 
-
-return chunks[chunkX];
-console.log("Bloques especiales generados en chunk:", chunk.x);
+  // Bloques especiales (flores, hierba, etc.)
+  generateSpecialBlocksInChunk(chunkX, 1);
 
   return chunks[chunkX];
 }
 
-// --- Generación de la capa de fondo (bg) ---
 function generateChunkBg(chunkX) {
   if (chunksBg[chunkX]) return chunksBg[chunkX];
 
-  // ⚙️ Genera el chunk frontal para copiar su base
   let chunk = generateChunk(chunkX);
   let data = [];
 
-  // 📦 Copiar el terreno base pero SIN bloques especiales de capa 1
   for (let y = 0; y < ROWS; y++) {
     data[y] = [];
     for (let x = 0; x < CHUNK_SIZE; x++) {
       let block = chunk.data[y][x];
-
-      // ❌ Eliminar bloques especiales que son solo de la capa 1
       const isLayer1Special = specialBlocks.some(
         sb => sb.block === block && sb.layer === 1
       );
-
-      if (isLayer1Special) {
-        // reemplaza la flor por aire o por el bloque base debajo
-        data[y][x] = null;
-      } else {
-        data[y][x] = block;
-      }
+      data[y][x] = isLayer1Special ? null : block;
     }
   }
 
@@ -2069,16 +1959,174 @@ function generateChunkBg(chunkX) {
     }
   }
 
-  // 🌍 Generar bloques especiales específicos del layer 0 (menas, etc.)
+  // Bloques especiales capa 0
   generateSpecialBlocksInChunk(chunkX, 0);
 
   chunksBg[chunkX] = { x: chunkX, data };
   return chunksBg[chunkX];
 }
+// 🌬️ === SISTEMA DE VIENTO BASADO EN LA SUPERFICIE ===
+
+const vientosonido = new Audio("Texturas/viento.mp3");
+vientosonido.loop = false;
+vientosonido.volume = 0;
+
+let windArea = { minY: 0, maxY: 0 };
+let targetVolume = 0;
+
+// 🔹 Detectar la superficie promedio del terreno
+// 🔹 Detectar la superficie promedio del terreno
+function detectarSuperficieViento() {
+  let surfaceYs = [];
+
+  for (let c in chunks) {
+    const data = chunks[c]?.data;
+    if (!data) continue;
+
+    for (let x = 0; x < CHUNK_SIZE; x++) {
+      for (let y = 0; y < ROWS; y++) {
+        if (data[y][x] === "grass") {
+          surfaceYs.push(y);
+          break;
+        }
+      }
+    }
+  }
+
+  if (surfaceYs.length > 0) {
+    const avgY = surfaceYs.reduce((a, b) => a + b, 0) / surfaceYs.length;
+
+    // 🌬️ El viento suena desde la superficie hasta “infinito” hacia arriba
+    // pero deja de sonar 2 bloques por debajo del pasto
+    windArea.minY = avgY + 2;  // límite inferior (2 bloques bajo tierra)
+    windArea.maxY = -Infinity; // sin límite superior
+  }
+}
+
+// 🔹 Ajustar volumen según altura del jugador
+function updateWindTargetVolume() {
+  const py = player.y;
+
+  if (py <= windArea.minY) {
+    // 🎯 Está en superficie o más arriba: viento completo
+    targetVolume = 0.6;
+  } else {
+    // 💨 Bajo tierra: apaga gradualmente en los 2 primeros bloques
+    const diff = Math.min(py - windArea.minY, 2);
+    targetVolume = Math.max(0.6 - diff * 0.3, 0);
+  }
+}
+
+// 🔹 Transición suave
+function smoothWindVolume() {
+  vientosonido.volume += (targetVolume - vientosonido.volume) * 0.05;
+
+  if (vientosonido.ended || vientosonido.paused) {
+    vientosonido.currentTime = 0;
+    if (vientosonido.paused) {
+      vientosonido.play().catch(() => {});
+    }
+  }
+}
+
+// 🔹 Activar el sonido al tocar
+canvas.addEventListener("click", initWindSound);
+canvas.addEventListener("touchstart", initWindSound);
+function initWindSound() {
+  if (vientosonido.paused) {
+    vientosonido.play().catch(() => {});
+  }
+  canvas.removeEventListener("click", initWindSound);
+  canvas.removeEventListener("touchstart", initWindSound);
+}
+
+// 🔹 Actualización constante
+setInterval(() => {
+  detectarSuperficieViento();
+  updateWindTargetVolume();
+  smoothWindVolume();
+}, 200);
 
 // === Capa de fondo (segunda capa) ===
 let chunksBg = {};
 
+// 🌬️ Sistema ambiental de viento (según densidad de árboles)
+let windSound = new Audio("Texturas/xd.mp3");
+windSound.loop = true;
+windSound.volume = 0;
+let ambientWindStrength = 0.25; // fuerza base del viento ambiental
+
+// Actualiza el viento cada cierto tiempo
+setInterval(updateWindSound, 3000);
+
+function updateWindSound() {
+  if (!windSound) return;
+
+  // Calcular cuántos árboles hay visibles o cercanos
+  const treeDensity = calculateTreeDensity();
+
+  // Cuantos más árboles, menos viento
+  let treeFactor;
+  if (treeDensity > 40) treeFactor = 0.3;   // bosque denso → viento suave
+  else if (treeDensity > 15) treeFactor = 0.6; // algunos árboles → viento medio
+  else treeFactor = 1.0;                     // sin árboles → viento fuerte
+
+  // Volumen objetivo según fuerza + densidad
+  const targetVol = Math.min(1, ambientWindStrength * treeFactor * 2);
+
+  fadeVolume(windSound, targetVol, 2000);
+
+  if (windSound.paused) {
+    windSound.play().catch(() => {});
+  }
+}
+
+// 📊 Cuenta cuántos bloques de árbol hay en los chunks cargados
+function calculateTreeDensity() {
+  let totalBlocks = 0;
+  let treeBlocks = 0;
+
+  for (const key in chunksBg) {
+    const chunk = chunksBg[key];
+    if (!chunk || !chunk.data) continue;
+
+    const data = chunk.data;
+    for (let y = 0; y < data.length; y++) {
+      const row = data[y];
+      if (!row) continue;
+      for (let x = 0; x < row.length; x++) {
+        totalBlocks++;
+        const block = row[x];
+        if (block && (block.includes("log") || block.includes("leaf"))) {
+          treeBlocks++;
+        }
+      }
+    }
+  }
+
+  // Devuelve el porcentaje de árboles en la zona (0–100)
+  if (totalBlocks === 0) return 0;
+  return (treeBlocks / totalBlocks) * 100;
+}
+
+// 🔈 Transición suave de volumen
+function fadeVolume(audio, target, duration, onComplete) {
+  const start = audio.volume;
+  const delta = target - start;
+  const steps = 30;
+  let current = 0;
+
+  clearInterval(audio._fade);
+  audio._fade = setInterval(() => {
+    current++;
+    audio.volume = start + (delta * current) / steps;
+    if (current >= steps) {
+      clearInterval(audio._fade);
+      audio.volume = target;
+      if (onComplete) onComplete();
+    }
+  }, duration / steps);
+}
 
 const invBtn = document.getElementById('inventory-btn');
 const invPanel = document.getElementById('inventory-panel');
@@ -2622,12 +2670,12 @@ setTimeout(changeWindDirection, firstChange);
 
 let windStrength = 0.02; // fuerza base del viento
 let nextWindChange = 0;
-let windSound = null;
+
 
 const weatherModes = ["none", "breeze", "normal", "windy", "storm"];
 
 // 🔊 Cargar sonido del viento
-windSound = new Audio("Texturas/viento.mp3");
+windSound = new Audio("Texturas/xd.mp3");
 windSound.loop = true;
 windSound.volume = 0;
 
@@ -2691,35 +2739,7 @@ function updateWind() {
 }
 
 // 🔊 Sonido del viento
-function updateWindSound() {
-  if (!windSound) return;
 
-  const targetVol = Math.min(1, windStrength * 8);
-  fadeVolume(windSound, targetVol, 1000);
-
-  if (windSound.paused) {
-    windSound.play().catch(() => {});
-  }
-}
-
-// 🔈 Transición suave de volumen
-function fadeVolume(audio, target, duration, onComplete) {
-  const start = audio.volume;
-  const delta = target - start;
-  const steps = 30;
-  let current = 0;
-
-  clearInterval(audio._fade);
-  audio._fade = setInterval(() => {
-    current++;
-    audio.volume = start + (delta * current) / steps;
-    if (current >= steps) {
-      clearInterval(audio._fade);
-      audio.volume = target;
-      if (onComplete) onComplete();
-    }
-  }, duration / steps);
-}
 
 // 🌦️ Cambio automático de clima cada 1–5 minutos
 function scheduleNextWeather() {
@@ -2974,8 +2994,6 @@ const savedCharacter = localStorage.getItem("character") || "Cubs";
 loadCharacter(savedCharacter);
 
 
-// Salto
-
 buttons.forEach(id => {
   const btn = document.getElementById(id);
 
@@ -3094,19 +3112,21 @@ function drawChunks() {
   for (let cx = startChunk; cx <= endChunk; cx++) {
     // === Fondo (capa 2 más oscuro) ===
     let chunkBg = generateChunkBg(cx);
+    if (!chunkBg || !chunkBg.data) continue; // 🛡️ seguridad
+
     for (let y = 0; y < ROWS; y++) {
+      if (!chunkBg.data[y]) continue; // 🛡️ evitar undefined
       for (let x = 0; x < CHUNK_SIZE; x++) {
         const type = chunkBg.data[y][x];
         if (!type) continue;
 
         const tex = textures[type];
-        if (!tex.complete) continue;
-if (type === 'leaf') {
-  if (Math.random() < 0.002) { // baja probabilidad → más natural
-    spawnLeafParticles(cx * CHUNK_SIZE + x, y + 1);
-  }
-}
+        if (!tex || !tex.complete) continue;
 
+        // 🌿 Partículas de hojas
+        if (type === 'leaf' && Math.random() < 0.002) {
+          spawnLeafParticles(cx * CHUNK_SIZE + x, y + 1);
+        }
 
         let screenX = (cx * CHUNK_SIZE + x) * BLOCK_SIZE - cameraX;
         let screenY = y * BLOCK_SIZE - cameraY;
@@ -3118,30 +3138,29 @@ if (type === 'leaf') {
         ) continue;
 
         ctx.save();
-ctx.drawImage(tex, screenX, screenY, BLOCK_SIZE, BLOCK_SIZE);
+        ctx.drawImage(tex, screenX, screenY, BLOCK_SIZE, BLOCK_SIZE);
 
-// oscurecer un poco con negro semitransparente SOLO si aplica
-// oscurecer un poco con negro semitransparente SOLO si el bloque debe tener oscuridad
-if (isDarkEnabled(type)) {
-  ctx.fillStyle = "rgba(0, 0, 0, 0.3)";
-  ctx.fillRect(screenX, screenY, BLOCK_SIZE, BLOCK_SIZE);
-}
-
-
-ctx.restore();
-
+        // 🌑 Oscurecer si corresponde
+        if (isDarkEnabled(type)) {
+          ctx.fillStyle = "rgba(0, 0, 0, 0.3)";
+          ctx.fillRect(screenX, screenY, BLOCK_SIZE, BLOCK_SIZE);
+        }
+        ctx.restore();
       }
     }
 
-    // === Frente (capa original interactuable) ===
-    let chunk = generateChunk(cx);
+    // === Frente (capa interactuable) ===
+    let chunk = chunks[cx]; // ✅ se obtiene el chunk real
+    if (!chunk || !chunk.data) continue; // 🛡️ seguridad
+
     for (let y = 0; y < ROWS; y++) {
+      if (!chunk.data[y]) continue;
       for (let x = 0; x < CHUNK_SIZE; x++) {
         const type = chunk.data[y][x];
         if (!type) continue;
 
         const tex = textures[type];
-        if (!tex.complete) continue;
+        if (!tex || !tex.complete) continue;
 
         let screenX = (cx * CHUNK_SIZE + x) * BLOCK_SIZE - cameraX;
         let screenY = y * BLOCK_SIZE - cameraY;
@@ -3398,6 +3417,7 @@ let ny = player.y + player.vy;
     }
   }
 }
+
 
 function initInventorySlots() {
   // asignar índices y tipos
@@ -5044,40 +5064,45 @@ function drawSkyStripes() {
 // Juego principal
 let lastTime = performance.now();
 function gameLoop(time){
-  let dt = (time - lastTime)/1000;
-  lastTime = time;
+    let dt = (time - lastTime)/1000;
+    lastTime = time;
 
-  ctx.clearRect(0,0,width,height);
+    ctx.clearRect(0,0,width,height);
 
-// velocidad dinámica: normal o agachado
-let speed = crouching ? playerSpeed * 0.4 : playerSpeed;
+    if (player) updateWindTargetVolume(player.y);
+smoothWindVolume();
 
-player.vx = 0;
-if (leftPressed) player.vx = -speed;
-if (rightPressed) player.vx = speed;
+    
 
+    // velocidad dinámica: normal o agachado
+    let speed = crouching ? playerSpeed * 0.4 : playerSpeed;
 
-if (jumpPressed && player.onGround) player.vy = jumpPower;
+    player.vx = 0;
+    if (leftPressed) player.vx = -speed;
+    if (rightPressed) player.vx = speed;
 
-  movePlayer();
-  cameraX = player.x*BLOCK_SIZE - width/2 + BLOCK_SIZE/2;
-  cameraY = player.y*BLOCK_SIZE - height/2 + BLOCK_SIZE/2;
-drawSkyStripes(); // cielo con franjas
+    if (jumpPressed && player.onGround) player.vy = jumpPower;
 
-  handleBreaking(dt);
-  updateBreaking(dt);
-playWalkSound();
+    movePlayer();
+    cameraX = player.x*BLOCK_SIZE - width/2 + BLOCK_SIZE/2;
+    cameraY = player.y*BLOCK_SIZE - height/2 + BLOCK_SIZE/2;
 
-  drawChunks();
-  drawBreaking();
-if (particlesEnabled) {
-  updateParticles(ctx);
+    drawSkyStripes(); // cielo con franjas
+    
+    handleBreaking(dt);
+    updateBreaking(dt);
+    playWalkSound();
+
+    drawChunks();
+    drawBreaking();
+    if (particlesEnabled) updateParticles(ctx);
+    drawPlayer(dt);
+
+    requestAnimationFrame(gameLoop);
 }
-  drawPlayer(dt);
 
-  requestAnimationFrame(gameLoop);
-}
 gameLoop();
+
 </script>
 </body>
 </html>
