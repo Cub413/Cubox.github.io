@@ -781,10 +781,114 @@ button:active {
   z-index: 5999;
   /* el panel tiene 6000 */
 }
+#game-console::-webkit-scrollbar {
+  width: 6px;
+}
+#game-console::-webkit-scrollbar-thumb {
+  background: #555;
+  border-radius: 4px;
+}
+#game-console::-webkit-scrollbar-track {
+  background: #111;
+}
 
 </style>
 </head>
 <body>
+<!-- 🧠 Consola en pantalla -->
+<div id="game-console" style="
+  display: none;
+  position: fixed;
+  top: 5px;
+  left: 5px;
+  width: 310px;
+  height: 150px;
+  background: linear-gradient(180deg, #111 0%, #222 100%);
+  color: #fff;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 9px;
+  line-height: 1.4em;
+  border: 2px solid #555;
+  border-radius: 8px;
+  white-space: pre-wrap;
+  padding: 5px;
+  z-index: 999999; /* 👈 mucho más alto para quedar siempre al frente */
+  user-select: text;
+  pointer-events: auto;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scrollbar-color: #555 #111;
+  text-shadow:
+    -1px -1px 0 #000,
+     1px -1px 0 #000,
+    -1px  1px 0 #000,
+     1px  1px 0 #000;
+">
+
+  <!-- 🧠 Encabezado -->
+  <div id="console-header" style="
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 4px;
+    border-bottom: 1px solid #333;
+    padding-bottom: 2px;
+  ">
+    <span style="color:#aaa;">CONSOLE</span>
+    <div style="display:flex; gap:3px;">
+      <button id="scroll-up" style="
+        background:#222;
+        color:#fff;
+        border:1px solid #555;
+        border-radius:4px;
+        font-family:'Press Start 2P', monospace;
+        font-size:8px;
+        width:18px;
+        height:18px;
+        line-height:12px;
+        text-align:center;
+        cursor:pointer;
+        touch-action: manipulation;
+      ">▲</button>
+      <button id="scroll-down" style="
+        background:#222;
+        color:#fff;
+        border:1px solid #555;
+        border-radius:4px;
+        font-family:'Press Start 2P', monospace;
+        font-size:8px;
+        width:18px;
+        height:18px;
+        line-height:12px;
+        text-align:center;
+        cursor:pointer;
+        touch-action: manipulation;
+      ">▼</button>
+      <button id="close-console" style="
+        background:#300;
+        color:#fff;
+        border:1px solid #900;
+        border-radius:4px;
+        font-family:'Press Start 2P', monospace;
+        font-size:8px;
+        width:18px;
+        height:18px;
+        line-height:12px;
+        text-align:center;
+        cursor:pointer;
+        touch-action: manipulation;
+      ">×</button>
+    </div>
+  </div>
+
+  <!-- 🧾 Contenido -->
+  <div id="console-content">
+
+    <p>esto sirve para ver errores o algunas cosas importantes para mi,para ti no, ya que ati no te serviria mucho :D </p>
+  </div>
+</div>
 
 
   <div id="chest-blur"></div>
@@ -948,7 +1052,6 @@ button:active {
       <div id="close-settings">×</div>
     </div>
     <div id="settings-content">
-    
 
 <h3>volumen de musica</h3>
 <div id="volume-controls">
@@ -1255,15 +1358,16 @@ const panel2 = document.getElementById('orientation-panel');
 // Herramientas
 const tools = {
   wood_pickaxe: {
-    fastBlocks: ['stone','coal'],
+    fastBlocks: ['stone','coal_ore','iron_ore','diamond_ore','gold_ore'],
     speed: 0.25
   },
   stone_pickaxe: {
-    fastBlocks: ['stone','coal_ore','iron'],
+    fastBlocks: ['stone','coal_ore','iron_ore','diamond_ore','gold_ore'],
+    
     speed: 0.15
   },
   iron_pickaxe: {
-    fastBlocks: ['stone','coal_ore','iron','gold','diamond'],
+    fastBlocks: ['stone','coal_ore','iron_ore','diamond_ore','gold_ore'],
     speed: 0.1
   },
 
@@ -1404,6 +1508,33 @@ let fpsToggle = document.getElementById("fps-toggle");
 
 let fpsValues = []; // guardamos varios FPS para hacer promedio
 let lastFrame = performance.now();
+// 🧩 Redirigir console.log al cuadro en pantalla
+(function() {
+  const gameConsole = document.getElementById("game-console");
+  const originalLog = console.log;
+
+  console.log = function(...args) {
+    // Mantener funcionalidad original
+    originalLog.apply(console, args);
+
+    // Mostrar también en pantalla
+    const msg = args.map(a => (typeof a === "object" ? JSON.stringify(a) : a)).join(" ");
+    const line = document.createElement("div");
+    line.textContent = "> " + msg;
+
+    gameConsole.appendChild(line);
+    gameConsole.scrollTop = gameConsole.scrollHeight; // auto-scroll
+  };
+
+  // (opcional) también capturar errores
+  window.addEventListener("error", e => {
+    const errLine = document.createElement("div");
+    errLine.style.color = "#FF5555";
+    errLine.textContent = "⚠️ " + e.message;
+    gameConsole.appendChild(errLine);
+    gameConsole.scrollTop = gameConsole.scrollHeight;
+  });
+})();
 
 // Alternar botón
 fpsToggle.addEventListener("click", () => {
@@ -1729,6 +1860,17 @@ const textures = {};
 textures.grass = new Image(); textures.grass.src = 'Texturas/cesped_parte_costado.jpg';
 textures.hierba = new Image(); textures.hierba.src = 'Texturas/hierba.png';
 textures.iron_ore = new Image(); textures.iron_ore.src = 'Texturas/iron_ore.png';
+textures.gold_ore = new Image(); 
+textures.gold_ore.src = 'Texturas/gold_ore.png';
+
+textures.diamond_ore = new Image(); 
+textures.diamond_ore.src = 'Texturas/diamond_ore.png';
+textures.gold = new Image(); 
+textures.gold.src = 'Texturas/gold.png';
+
+textures.diamond = new Image(); 
+textures.diamond.src = 'Texturas/diamond.png';
+
 textures.iron = new Image(); textures.iron.src = 'Texturas/iron.png';
 textures.flower = new Image(); textures.flower.src = 'Texturas/flor_rojap.png';
 textures.flowerL = new Image(); textures.flowerL.src = 'Texturas/flor_lilap.png';
@@ -1757,18 +1899,48 @@ for(let i=1;i<=5;i++){
   crackTextures.push(img);
 }
 // --- Generar vetas de carbón ---
-function generateCoalVein(chunk, localX, localY){
-  let veinSize = 1 + Math.floor(Math.random() * 6); // 1 a 6 bloques
+function generateCoalVein(chunk, localX, localY) {
+  let veinSize = 2 + Math.floor(Math.random() * 5); // 2 a 6 bloques
 
-  for(let i = 0; i < veinSize; i++){
+  for (let i = 0; i < veinSize; i++) {
     let dx = localX + Math.floor(Math.random() * 3) - 1;
     let dy = localY + Math.floor(Math.random() * 3) - 1;
 
-    if(chunk.data[dy] && chunk.data[dy][dx] === 'stone'){
-      chunk.data[dy][dx] = 'coal_ore';
+    if (chunk.data[dy] && chunk.data[dy][dx] === "stone") {
+      chunk.data[dy][dx] = "coal_ore";
     }
   }
 }
+
+// --- Generar vetas de hierro ---
+function generateIronVein(chunk, localX, localY) {
+  let veinSize = 2 + Math.floor(Math.random() * 5); // 2 a 6 bloques
+  for (let i = 0; i < veinSize; i++) {
+    let dx = localX + Math.floor(Math.random() * 3) - 1;
+    let dy = localY + Math.floor(Math.random() * 3) - 1;
+
+    if (chunk.data[dy] && chunk.data[dy][dx] === "stone") {
+      chunk.data[dy][dx] = "iron_ore";
+    }
+  }
+}
+
+// --- Generar vetas de oro ---
+function generateGoldVein(chunk, localX, localY) {
+  let veinSize = 2 + Math.floor(Math.random() * 4); // 2 a 5 bloques
+  for (let i = 0; i < veinSize; i++) {
+    let dx = localX + Math.floor(Math.random() * 3) - 1;
+    let dy = localY + Math.floor(Math.random() * 3) - 1;
+
+    if (chunk.data[dy] && chunk.data[dy][dx] === "stone") {
+      chunk.data[dy][dx] = "gold_ore";
+    }
+  }
+}
+
+
+
+
 let chunks = {};
 let Worlddata = {};   // lo que ya usamos en generateChunk
 let worldData = Worlddata; // 👈 alias para los que usan worldData
@@ -1835,6 +2007,27 @@ const specialBlocks = [
     minPerChunk: 3,
     layer: 0 // superficie
   },
+  {
+  block: "gold_ore",
+  onTopOf: "stone",
+  minY: 20,
+  maxY: 60,
+  chance: 0.02,
+  maxPerChunk: 6,
+  minPerChunk: 2,
+  layer: 0
+},
+{
+  block: "diamond_ore",
+  onTopOf: "stone",
+  minY: 10,
+  maxY: 40,
+  chance: 0.01,
+  maxPerChunk: 3,
+  minPerChunk: 1,
+  layer: 0
+},
+
   {
     block: "coal_ore",
     onTopOf: "stone",
@@ -1914,11 +2107,24 @@ function generateChunk(chunkX) {
       else if (y <= surfaceY + 2) {
         data[y][x] = "dirt"; // capa de tierra
       } 
-      else {
-        data[y][x] = "stone"; // roca profunda
-        // 🎯 carbón dentro de la piedra
-        if (y > 30 && y < 70 && Math.random() < 0.02) {
-          generateCoalVein({ data }, x, y);
+else {
+  data[y][x] = "stone";
+
+  // 🎯 Generación de minerales naturales
+  if (y > 40 && y < 80 && Math.random() < 0.02) {
+    generateCoalVein({ data }, x, y);
+  }
+  if (y > 30 && y < 70 && Math.random() < 0.015) {
+    generateIronVein({ data }, x, y);
+  }
+  if (y > 20 && y < 60 && Math.random() < 0.01) {
+    generateGoldVein({ data }, x, y);
+  }
+  if (y > 10 && y < 40 && Math.random() < 0.005) {
+    generateDiamondVein({ data }, x, y);
+  
+
+
         }
       }
     }
@@ -2128,7 +2334,44 @@ function fadeVolume(audio, target, duration, onComplete) {
   }, duration / steps);
 }
 
+
+
+// 🧠 Mostrar consola al hacer touchmove en el botón del inventario
 const invBtn = document.getElementById('inventory-btn');
+if (invBtn) {
+  invBtn.addEventListener('touchmove', () => {
+    const consoleDiv = document.getElementById("game-console");
+    if (!consoleDiv) return;
+    consoleDiv.style.display = "block";
+  });
+}
+
+// ❌ Cerrar consola
+const closeBtn = document.getElementById('close-console');
+if (closeBtn) {
+  closeBtn.addEventListener('click', () => {
+    document.getElementById('game-console').style.display = "none";
+  });
+}
+
+// ⬆️ Ir directamente al inicio del contenido
+const scrollUp = document.getElementById('scroll-up');
+if (scrollUp) {
+  scrollUp.addEventListener('click', () => {
+    const content = document.getElementById('console-content');
+    content.scrollTop = 0; // 👈 sin animación, directo al inicio
+  });
+}
+
+// ⬇️ Ir directamente al final del contenido
+const scrollDown = document.getElementById('scroll-down');
+if (scrollDown) {
+  scrollDown.addEventListener('click', () => {
+    const content = document.getElementById('console-content');
+    content.scrollTop = content.scrollHeight; // 👈 directo al final
+  });
+}
+
 const invPanel = document.getElementById('inventory-panel');
 const invBlur = document.getElementById('inv-blur');
 
@@ -2194,6 +2437,8 @@ craftArrow.addEventListener("touchmove", () => {
   secretMenu.classList.add("active");
 });
 
+// 🧠 Mostrar consola al hacer touchmove en el botón del inventario
+
 // cerrar con la ×
 secretClose.addEventListener("click", () => {
   secretMenu.classList.remove("active");
@@ -2205,6 +2450,11 @@ const allItems = [
   { type: "flowerL", src: "Texturas/flor_lila.png" },
   { type: "flowerA", src: "Texturas/flor_azul.png" },
   { type: "flowerN", src: "Texturas/flor_naranja.png" },
+  { type: "gold_ore", src: "Texturas/gold_ore.png" },
+{ type: "diamond_ore", src: "Texturas/diamond_ore.png" },
+
+{ type: "gold", src: "Texturas/gold.png" },
+{ type: "diamond", src: "Texturas/diamond.png" },
   { type: "dirt", src: "Texturas/tierra.jpg" },
   { type: "iron_ore", src: "Texturas/iron_ore.png" },
    { type: "iron", src: "Texturas/iron.png" },
@@ -4452,7 +4702,8 @@ let breaking = {
 const blockData = {
   'stone': {time:30},
     'iron_ore': {time:30},
-     'gold_ore': {time:30},
+     'gold_ore': {time:40},
+      'diamond_ore': {time:50},    
   'dirt': {time:5},
   'grass': {time:5},
     'flower': {time:1},
@@ -4482,6 +4733,8 @@ const simpleDrops = {
   log:      { item: 'log', min: 1, max: 1 },
   flower:      { item: 'flower', min: 1, max: 1 },
   iron_ore:      { item: 'iron', min: 1, max: 1 },
+  diamond_ore:      { item: 'diamond', min: 1, max: 1 },
+  gold_ore:      { item: 'gold', min: 1, max: 1 },
   plank:    { item: 'plank', min: 1, max: 1 }
 };
 
@@ -4805,7 +5058,7 @@ canvas.addEventListener('touchstart', e=>{
 //check 1//
 const nonPlaceable = [
   'stick','coal','iron',
-  'wood_pickaxe', 'stone_pickaxe',
+  'wood_pickaxe','gold','diamond', 'stone_pickaxe',
   'wood_axe', 'stone_axe'
 ];
 const chestBlur = document.getElementById("chest-blur");
