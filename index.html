@@ -3607,6 +3607,14 @@ function isBlock(wx, wy){
 let collidingLeft=false, collidingRight=false, collidingTop=false, collidingBottom=false;
 function movePlayer() {
   collidingLeft=false; collidingRight=false; collidingTop=false; collidingBottom=false;
+if (!wasOnGround && player.onGround) {
+  // acaba de tocar el suelo
+  landSound.currentTime = 0;
+  landSound.volume = 0.2; // volumen real
+  landSound.play();
+}
+
+wasOnGround = player.onGround;
 
   // --- Lógica de soporte al agacharse ---
   // --- Lógica de soporte al agacharse ---
@@ -4642,10 +4650,31 @@ document.getElementById('right').addEventListener('touchstart', () => {
 });
 document.getElementById('right').addEventListener('touchend', () => rightPressed=false);
 
+const jumpSound = new Audio('Texturas/Salto.mp3');
+jumpSound.volume = 0.2;
+
+const landSound = new Audio('Texturas/Caida.mp3');
+landSound.volume = 0.0; // empieza silencioso
+
+let wasOnGround = false; // para detectar aterrizajes
+
+
 document.getElementById('jump').addEventListener('touchstart', () => {
-  jumpPressed = true;
-  lastDirection = {dx:0, dy:-1}; // arriba
+  if (player.onGround) { // solo si toca el suelo
+    jumpPressed = true;
+    lastDirection = { dx: 0, dy: -1 };
+
+    jumpSound.currentTime = 0;
+    jumpSound.play();
+
+    // preparar sonido de aterrizaje (se reproduce en silencio)
+    landSound.currentTime = 0;
+    landSound.volume = 0.0;
+    landSound.play();
+  }
 });
+
+
 document.getElementById('jump').addEventListener('touchend', () => jumpPressed=false);
 
 document.getElementById('down').addEventListener('touchstart', () => {
