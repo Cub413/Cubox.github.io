@@ -11,6 +11,12 @@ html, body {
   padding: 0;
   overflow: hidden;
   font-family: 'Press Start 2P', monospace;
+
+  /* ❌ Evitar selección de texto */
+  user-select: none;        /* Estándar */
+  -webkit-user-select: none; /* Chrome/Safari */
+  -moz-user-select: none;    /* Firefox */
+  -ms-user-select: none;     /* IE/Edge */
 }
 
 canvas {
@@ -822,6 +828,27 @@ button:active {
 </style>
 </head>
 <body>
+  <!-- Botón de cambio de cámara -->
+<div id="camera-container" style="
+  position: fixed;
+  top: 10px;        /* esquina superior */
+  right: 10px;      /* margen desde la derecha */
+  z-index: 10;
+  width: 60px;      /* tamaño más pequeño */
+  height: 30px;     /* tamaño más pequeño */
+">
+  <div id="camera-btn" class="control-btn" style="
+    width: 100%;
+    height: 100%;
+    font-size: 12px;      /* texto más pequeño */
+    text-align: center;
+    line-height: 30px;    /* centra verticalmente el texto */
+    padding: 0;
+  ">
+    CAM
+  </div>
+</div>
+
   <!-- Menú de selección de personajes -->
 <div id="characterMenu">
   <div class="character-grid">
@@ -1379,7 +1406,12 @@ function setZoom(level) {
 
 const slider = document.getElementById("zoomSlider");
 slider.addEventListener("input", (e) => {
-  setZoom(parseInt(e.target.value));
+  const zoomValue = parseInt(e.target.value);
+  setZoom(zoomValue);
+
+  // 🎯 Ajustar automáticamente el rango de cámara según zoom
+  // entre más zoom, más pequeño el rango; entre menos zoom, más grande
+  cameraMargin = Math.max(60, 400 - zoomValue * 10);
 });
 
 let selectedObject = null;
@@ -1558,6 +1590,7 @@ window.addEventListener("load", () => {
     overlay413.style.display = "none";
   });
 });
+document.addEventListener('contextmenu', e => e.preventDefault());
 
 
 let fpsVisible = false;
@@ -3585,13 +3618,74 @@ let crouching = false; // variable que indica si el jugador está agachado
 
 let currentFrame = 0;
 let frameTimer = 0;
+// Touch para colocar bloque
+// === 📷 SISTEMA DE CÁMARA NUEVO ===
+let camera = { x: 0, y: 0, type: "normal" };
+let cameraMargin = 120; // margen en píxeles (modo rango)
+let cameraSpeed = 0.1; // suavizado
+let cameraX = 0,
+  cameraY = 0; // coordenadas reales
 
+// Centrar la cámara al jugador (al inicio o al cambiar de mapa)
+function centerCameraOnPlayer() {
+  camera.x = player.x;
+  camera.y = player.y;
+  cameraX = camera.x * BLOCK_SIZE - width / 2 + BLOCK_SIZE / 2;
+  cameraY = camera.y * BLOCK_SIZE - height / 2 + BLOCK_SIZE / 2;
+}
+
+// Actualizar cámara según el tipo
+function updateCamera() {
+  if (!player) return;
+  
+  if (camera.type === "normal") {
+    // sigue al jugador siempre
+    camera.x += (player.x - camera.x) * cameraSpeed;
+    camera.y += (player.y - camera.y) * cameraSpeed;
+  }
+  
+  else if (camera.type === "rango") {
+  const px = player.x * BLOCK_SIZE;
+  const py = player.y * BLOCK_SIZE;
+  const cx = camera.x * BLOCK_SIZE;
+  const cy = camera.y * BLOCK_SIZE;
+
+  // Calcular si el jugador está fuera del margen
+  let dx = px - cx;
+  let dy = py - cy;
+
+  if (Math.abs(dx) > cameraMargin || Math.abs(dy) > cameraMargin) {
+    // Calcular nuevo objetivo (centro al jugador)
+    let targetX = player.x;
+    let targetY = player.y;
+
+    // Interpolación suave hacia el jugador
+    camera.x += (targetX - camera.x) * (cameraSpeed * 0); // más lento
+    camera.y += (targetY - camera.y) * (cameraSpeed * 0);
+  }
+}
+
+  // aplicar desplazamiento final
+  cameraX = camera.x * BLOCK_SIZE - width / 2 + BLOCK_SIZE / 2;
+  cameraY = camera.y * BLOCK_SIZE - height / 2 + BLOCK_SIZE / 2;
+}
+
+// === 🎮 Botón táctil para alternar cámara ===
+const cameraBtn = document.getElementById("camera-btn");
+cameraBtn.addEventListener("touchstart", () => {
+  camera.type = (camera.type === "normal") ? "rango" : "normal";
+  cameraBtn.textContent = camera.type === "normal" ? "CAM" : "RNG";
+  cameraBtn.style.backgroundColor =
+    camera.type === "normal" ? "rgba(100,100,100,0.5)" : "rgba(50,200,50,0.7)";
+  console.log("Cámara:", camera.type);
+});
 // Cambiamos el jugador a usar texturas
 let player = { 
   x:5, y:30, width:0.8, height:0.8, 
   vx:0, vy:0, onGround:false, 
   facing: 1 // 1 = derecha, -1 = izquierda
 };
+centerCameraOnPlayer();
 const handOffsets = {
   "Cubs1.png": { x:6, y:70, scale:1, rotation:40, flip:-1 },
   "Cubs2.png": { x:20, y:70, scale:1, rotation:40, flip:-1 },
@@ -3734,7 +3828,7 @@ const jumpPower = -15 / BLOCK_SIZE;
 const playerSpeed = 0.12;
 let speed = crouching ? playerSpeed * 0.4 : playerSpeed;
 
-let cameraX=0, cameraY=0;
+
 
 function isBlock(wx, wy){
   const block = getBlock(Math.floor(wx), Math.floor(wy));
@@ -5578,7 +5672,6 @@ function drawSkyStripes() {
   }
 }
 
-// Touch para colocar bloque
 
 // Juego principal
 let lastTime = performance.now();
@@ -5591,7 +5684,8 @@ function gameLoop(time){
     if (player) updateWindTargetVolume(player.y);
 smoothWindVolume();
 
-    
+    updateCamera();
+
 
     // velocidad dinámica: normal o agachado
     let speed = crouching ? playerSpeed * 0.4 : playerSpeed;
@@ -5603,8 +5697,7 @@ smoothWindVolume();
     if (jumpPressed && player.onGround) player.vy = jumpPower;
 
     movePlayer();
-    cameraX = player.x*BLOCK_SIZE - width/2 + BLOCK_SIZE/2;
-    cameraY = player.y*BLOCK_SIZE - height/2 + BLOCK_SIZE/2;
+    
 
     drawSkyStripes(); // cielo con franjas
     
