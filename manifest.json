@@ -1,0 +1,21 @@
+{
+  "name": "cubox",
+  "short_name": "cbox",
+  "description": "Mi juego web que se puede instalar como app",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#000000",
+  "theme_color": "#FF0000",
+  "icons": [
+    {
+      "src": "Texturas/Cubs1.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

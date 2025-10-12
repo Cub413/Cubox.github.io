@@ -12,11 +12,7 @@ html, body {
   overflow: hidden;
   font-family: 'Press Start 2P', monospace;
 
-  /* ❌ Evitar selección de texto */
-  user-select: none;        /* Estándar */
-  -webkit-user-select: none; /* Chrome/Safari */
-  -moz-user-select: none;    /* Firefox */
-  -ms-user-select: none;     /* IE/Edge */
+
 }
 
 canvas {
@@ -824,10 +820,14 @@ button:active {
   transform: translateY(2px);
   box-shadow: 0 1px 0 #111;
 }
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#FF0000">
 
 </style>
 </head>
 <body>
+  <button id="installBtn" style="display:none;">Instalar App</button>
+
   <!-- Botón de cambio de cámara -->
 <div id="camera-container" style="
   position: fixed;
@@ -1473,8 +1473,27 @@ all: {
     texture: 'Texturas/hachad_piedra.png'
   }
 };
+let deferredPrompt;
+const installBtn = document.getElementById('installBtn');
 
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault(); // Evita que se muestre automáticamente
+  deferredPrompt = e;
+  installBtn.style.display = 'block';
+});
 
+installBtn.addEventListener('click', async () => {
+  installBtn.style.display = 'none';
+  deferredPrompt.prompt(); // Muestra el diálogo de instalación
+  const { outcome } = await deferredPrompt.userChoice;
+  console.log('Resultado de la instalación:', outcome);
+  deferredPrompt = null;
+});
+
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js')
+    .then(() => console.log('Service Worker registrado'));
+}
   const characterBtn = document.getElementById('characterBtn');
   const characterMenu = document.getElementById('characterMenu');
 
